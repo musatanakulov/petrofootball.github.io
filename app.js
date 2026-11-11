@@ -2,7 +2,7 @@ const tg = window.Telegram.WebApp;
 tg.expand(); // Разворачиваем Mini App на весь экран
 
 // Укажите URL вашего запущенного бэкенда (например, локальный или публичный адрес сервера)
-const API_URL = "https://your-backend-domain.com/api"; 
+const API_URL = "http://127.0.0.1:8000/api"; 
 
 document.addEventListener("DOMContentLoaded", () => {
     loadLeagues();
