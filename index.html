@@ -3,27 +3,52 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Футбольный Турнир</title>
-    <!-- Официальный SDK Telegram -->
+    <title>Кубок Акима города Петропавловск 2026-27</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div id="app">
-        <!-- Экран выбора лиг и команд -->
-        <div id="leagues-screen" class="screen active">
-            <h1>🏆 Футбольные Лиги</h1>
-            <div id="leagues-container"></div>
-        </div>
 
-        <!-- Экран профиля команды -->
-        <div id="team-screen" class="screen">
-            <button id="back-btn" class="back-button">← Назад к списку</button>
-            <div id="team-profile-container"></div>
+    <!-- Шапка приложения с логотипами по бокам и названием по центру -->
+    <header class="app-header">
+        <img src="logo1.png" alt="Лого турнира" class="header-logo">
+        <div class="header-title-wrapper">
+            <p class="header-subtitle">Официальный турнир</p>
+            <h1 class="app-title">Кубок Акима города Петропавловск</h1>
         </div>
+        <img src="logo2.png" alt="Лого KFF" class="header-logo">
+    </header>
+
+    <!-- Навигационные вкладки -->
+    <div class="tabs">
+        <button class="tab-btn active" onclick="switchTab('teams')">Команды</button>
+        <button class="tab-btn" onclick="switchTab('matches')">Расписание</button>
+        <button class="tab-btn" onclick="switchTab('standings')">Таблица</button>
+        <button class="tab-btn" onclick="switchTab('scorers')">Бомбардиры</button>
+        <button class="tab-btn" onclick="switchTab('disq')">Дисквалификации</button>
+    </div>
+
+    <!-- Вкладки контента -->
+    <div id="teams-tab" class="tab-content active">
+        <div id="leagues-container"><p class="no-data">Загрузка команд...</p></div>
+    </div>
+
+    <div id="matches-tab" class="tab-content">
+        <div id="matches-container"><p class="no-data">Загрузка расписания...</p></div>
+    </div>
+
+    <div id="standings-tab" class="tab-content">
+        <div id="standings-container"><p class="no-data">Загрузка таблицы...</p></div>
+    </div>
+
+    <div id="scorers-tab" class="tab-content">
+        <div id="scorers-container"><p class="no-data">Загрузка бомбардиров...</p></div>
+    </div>
+
+    <div id="disq-tab" class="tab-content">
+        <div id="disq-container"><p class="no-data">Загрузка дисквалификаций...</p></div>
     </div>
 
     <script src="app.js"></script>
 </body>
 </html>
-<!-- update -->
