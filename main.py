@@ -5,7 +5,7 @@ from fastapi.responses import FileResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
-from database import SessionLocal, init_db, mark_backfill_done, League, Team, Player, Match, MatchEvent, PlayerVote, Sanction, RoundClosure
+from database import SessionLocal, init_db, mark_backfill_done, League, Team, Player, Match, MatchEvent, PlayerVote, Sanction, RoundClosure, Subscriber
 import backup
 from images import optimize_image, MAX_UPLOAD_BYTES, LOGO_MAX_SIDE, PHOTO_MAX_SIDE
 from config import BOT_TOKEN, ADMIN_TELEGRAM_IDS, ALLOW_DEV_ADMIN, INIT_DATA_MAX_AGE, TZ_OFFSET_HOURS
@@ -190,7 +190,7 @@ def startup_event():
     backup.start_scheduler()
 
 # --- Раздача фронтенда с того же адреса, что и API (только явные файлы, не вся папка) ---
-FRONTEND_FILES = {"index.html", "app.js", "style.css", "logo1.webp", "logo2.webp", "design-system.html"}
+FRONTEND_FILES = {"index.html", "app.js", "style.css", "logo1.webp", "logo2.webp", "design-system.html", "i18n.js"}
 
 # no-cache: браузер каждый раз сверяется с сервером (ETag), поэтому после правок стиля/скриптов
 # не остаётся «старой» версии из кэша
@@ -1199,6 +1199,48 @@ def build_league_polls(db: Session, league_id: int, voter_id: Optional[int]) -> 
     polls.reverse()  # свежие туры выше
     polls.sort(key=lambda p: order[p["status"]])  # sort устойчивый: внутри статуса порядок «свежие выше» сохраняется
     return polls
+
+# ---------------------------------------------------------------------------
+# Настройки пользователя: «моя команда», язык, уведомления (по подписи Telegram)
+# ---------------------------------------------------------------------------
+class MeSettings(BaseModel):
+    favorite_team_id: Optional[int] = None
+    clear_favorite: bool = False          # снять «мою команду»
+    notifications: Optional[bool] = None
+    lang: Optional[str] = None            # ru | kk
+
+def _me_payload(sub: Optional[Subscriber], identified: bool) -> dict:
+    if not sub:
+        return {"identified": identified, "favorite_team_id": None, "notifications": True, "lang": None}
+    return {"identified": identified, "favorite_team_id": sub.favorite_team_id, "notifications": bool(sub.notifications), "lang": sub.lang}
+
+@app.get("/api/me")
+def get_me(request: Request, x_telegram_init_data: Optional[str] = Header(None), db: Session = Depends(get_db)):
+    uid = get_voter_id(request, x_telegram_init_data)
+    if uid is None:
+        return _me_payload(None, False)
+    return _me_payload(db.query(Subscriber).filter(Subscriber.tg_user_id == uid).first(), True)
+
+@app.post("/api/me/settings")
+def update_me(data: MeSettings, request: Request, x_telegram_init_data: Optional[str] = Header(None), db: Session = Depends(get_db)):
+    uid = get_voter_id(request, x_telegram_init_data)
+    if uid is None:
+        raise HTTPException(status_code=403, detail="Настройки сохраняются только при входе из Telegram")
+    if data.lang is not None and data.lang not in ("ru", "kk"):
+        raise HTTPException(status_code=400, detail="Неизвестный язык")
+    if data.favorite_team_id is not None and not db.query(Team).filter(Team.id == data.favorite_team_id).first():
+        raise HTTPException(status_code=404, detail="Команда не найдена")
+    sub = db.query(Subscriber).filter(Subscriber.tg_user_id == uid).first()
+    if not sub:
+        user = verify_telegram_init_data(x_telegram_init_data) or {}
+        sub = Subscriber(tg_user_id=uid, chat_id=uid, first_name=(user.get("first_name") or "")[:100])  # в личном чате chat_id = id пользователя
+        db.add(sub)
+    if data.clear_favorite: sub.favorite_team_id = None
+    elif data.favorite_team_id is not None: sub.favorite_team_id = data.favorite_team_id
+    if data.notifications is not None: sub.notifications = data.notifications
+    if data.lang is not None: sub.lang = data.lang
+    db.commit()
+    return _me_payload(sub, True)
 
 @app.get("/api/leagues/{league_id}/rounds")
 def get_league_rounds(league_id: int, db: Session = Depends(get_db)):

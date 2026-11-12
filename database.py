@@ -123,6 +123,32 @@ class PlayerVote(Base):
     player = relationship("Player")
 
 
+class Subscriber(Base):
+    """Пользователь Telegram: любимая команда, язык и согласие на уведомления от бота."""
+    __tablename__ = "subscribers"
+
+    id = Column(Integer, primary_key=True, index=True)
+    tg_user_id = Column(Integer, unique=True, index=True)   # проверенный по подписи Telegram id
+    chat_id = Column(Integer)                               # личный чат с ботом (совпадает с id пользователя)
+    first_name = Column(String, default="")
+    favorite_team_id = Column(Integer, ForeignKey("teams.id"), nullable=True)
+    lang = Column(String, default="ru")                     # ru | kk
+    notifications = Column(Boolean, default=True)           # напоминания о матчах и голосовании
+    blocked = Column(Boolean, default=False)                # бот не может писать (пользователь его заблокировал)
+    created_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+
+class SentNotification(Base):
+    """Что уже отправлено кому — чтобы не слать одно и то же дважды."""
+    __tablename__ = "sent_notifications"
+    __table_args__ = (UniqueConstraint("subscriber_id", "key", name="uq_sent_once"),)
+
+    id = Column(Integer, primary_key=True, index=True)
+    subscriber_id = Column(Integer, ForeignKey("subscribers.id"), index=True)
+    key = Column(String)   # например "vote:1:Тур 3" или "match24:57"
+    sent_at = Column(DateTime, default=lambda: datetime.now(timezone.utc).replace(tzinfo=None))
+
+
 class RoundClosure(Base):
     """Админ закрыл тур для голосования, хотя часть матчей не сыграна (например, перенесена)."""
     __tablename__ = "round_closures"

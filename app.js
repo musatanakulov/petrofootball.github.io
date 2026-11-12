@@ -5,7 +5,7 @@ const API_ORIGIN = ((document.querySelector('meta[name="api-origin"]') || {}).co
 const API_URL = `${API_ORIGIN}/api`;
 
 const PLACEHOLDER_IMG = 'data:image/svg+xml;utf8,' + encodeURIComponent(
-    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect x="6" y="6" width="68" height="68" rx="14" fill="#1b2650"/><text x="40" y="52" font-size="36" text-anchor="middle">⚽</text></svg>'
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 80 80"><rect x="6" y="6" width="68" height="68" rx="14" fill="#6b7aa8"/><text x="40" y="52" font-size="36" text-anchor="middle">⚽</text></svg>'
 );
 
 // Превращает относительный путь /static/... в полный адрес бэкенда; пустые и мёртвые заглушки — в локальную картинку
@@ -44,7 +44,7 @@ document.addEventListener('DOMContentLoaded', async () => {
         window.Telegram.WebApp.ready();
         window.Telegram.WebApp.expand();
     }
-    await Promise.all([fetchLeagues(), checkAdmin()]);
+    await Promise.all([fetchLeagues(), checkAdmin(), loadMe()]);
     renderSubtabs();
     loadCurrentTabContent();
 
@@ -183,7 +183,9 @@ async function fetchMatches(leagueId) {
             .sort((a, b) => (a.starts_at || '9999').localeCompare(b.starts_at || '9999'));
         const allTbd = roundMatches.every(m => m.date_tbd);
 
-        container.innerHTML = `
+        const myCard = await myTeamCard();
+
+        container.innerHTML = myCard + `
             <div style="text-align: center; margin-bottom: 12px; font-weight: bold; color: var(--heading); font-size: 15px;">
                 📌 Ближайший тур: ${esc(targetRound)}
             </div>
@@ -394,6 +396,117 @@ async function saveSchedule() {
     } catch (e) { console.error(e); msg.style.color = 'var(--red)'; msg.textContent = 'Сетевая ошибка. Попробуйте ещё раз.'; }
 }
 
+// --- МОЯ КОМАНДА И НАСТРОЙКИ ---
+let myTeamId = Number(safeStorage('myTeam')) || null;
+let me = { identified: false, notifications: true, lang: null };
+
+function safeStorage(key, value) {
+    try {
+        if (value === undefined) return localStorage.getItem(key);
+        if (value === null) localStorage.removeItem(key); else localStorage.setItem(key, value);
+    } catch (e) { /* хранилище недоступно — работаем без него */ }
+    return null;
+}
+
+async function loadMe() {
+    try {
+        const res = await fetch(`${API_URL}/me`, { headers: adminHeaders() });
+        if (!res.ok) return;
+        me = await res.json();
+        if (me.identified) {
+            if (me.lang && !safeStorage('lang') && me.lang !== (window.APP_LANG || 'ru')) { safeStorage('lang', me.lang); location.reload(); return; }
+            if (me.favorite_team_id) { myTeamId = me.favorite_team_id; safeStorage('myTeam', String(myTeamId)); }
+            else if (myTeamId) saveMeSettings({ favorite_team_id: myTeamId });   // выбранное локально переносим на сервер
+        }
+    } catch (e) { console.error(e); }
+}
+
+async function saveMeSettings(body) {
+    if (!me.identified) return false;   // вне Telegram настройки живут только в этом браузере
+    try {
+        const res = await fetch(`${API_URL}/me/settings`, {
+            method: 'POST', headers: adminHeaders({ 'Content-Type': 'application/json' }), body: JSON.stringify(body)
+        });
+        if (res.ok) { me = await res.json(); return true; }
+    } catch (e) { console.error(e); }
+    return false;
+}
+
+function setMyTeam(teamId) {
+    myTeamId = teamId || null;
+    safeStorage('myTeam', myTeamId ? String(myTeamId) : null);
+    saveMeSettings(myTeamId ? { favorite_team_id: myTeamId } : { clear_favorite: true });
+    loadCurrentTabContent();
+}
+
+function toggleMyTeam(teamId) {
+    setMyTeam(myTeamId === teamId ? null : teamId);
+    openTeamProfile(teamId);   // обновить звезду
+}
+
+// Карточка «Моя команда» над расписанием: ближайший несыгранный матч
+async function myTeamCard() {
+    if (!myTeamId) return '';
+    try {
+        const team = await (await fetch(`${API_URL}/teams/${myTeamId}`)).json();
+        const next = (team.matches || []).find(m => m.status === 'scheduled' && !m.annulled);
+        const body = next
+            ? `Следующий матч: <b>${esc(next.opponent_name)}</b> · ${esc(next.round)} · ${esc(whenLabel(next))}`
+            : (team.withdrawn ? 'Команда снята с турнира' : 'Несыгранных матчей нет');
+        return `<div class="my-team-card" onclick="openTeamProfile(${team.id})">
+            <img loading="lazy" src="${mediaUrl(team.logo_url)}" width="34" height="34" style="object-fit: contain;">
+            <div><div class="my-team-title">⭐ ${esc(team.name)}</div><div class="my-team-sub">${body}</div></div></div>`;
+    } catch (e) { console.error(e); return ''; }
+}
+
+function openSettingsModal() {
+    const modal = ensureModal('settings-modal', 1450);
+    const theme = safeStorage('theme') || 'auto';
+    const seg = (name, current, options) => options.map(([v, label]) =>
+        `<button class="seg-btn ${current === v ? 'active' : ''}" onclick="setSetting('${name}', '${v}')">${label}</button>`).join('');
+    const teamOptions = leaguesData.map(l => `
+        <optgroup label="${esc(l.name)}">${l.teams.slice().sort((a, b) => a.name.localeCompare(b.name, 'ru'))
+            .map(t => `<option value="${t.id}" ${t.id === myTeamId ? 'selected' : ''}>${esc(t.name)}</option>`).join('')}</optgroup>`).join('');
+    modal.innerHTML = `
+        <div style="background: var(--surface-solid); width: 100%; max-width: 440px; border-radius: 16px; padding: 20px; max-height: 90vh; overflow-y: auto;">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 14px;">
+                <h3 style="margin: 0; color: var(--heading);">⚙️ Настройки</h3>
+                <button onclick="document.getElementById('settings-modal').style.display='none'" style="background: none; border: none; font-size: 20px; cursor: pointer;">✕</button>
+            </div>
+            <label class="sanction-label" style="margin-top: 0;">Язык / Тіл</label>
+            <div class="seg">${seg('lang', window.APP_LANG || 'ru', [['ru', 'Русский'], ['kk', 'Қазақша']])}</div>
+
+            <label class="sanction-label">Тема</label>
+            <div class="seg">${seg('theme', theme, [['auto', 'Авто'], ['light', 'Светлая'], ['dark', 'Тёмная']])}</div>
+
+            <label class="sanction-label">⭐ Моя команда</label>
+            <select id="my-team-select" class="sanction-input" onchange="setMyTeam(Number(this.value))">
+                <option value="0">— не выбрана —</option>${teamOptions}
+            </select>
+            <div class="sanction-hint">Её ближайший матч показывается в «Расписании», в таблице она подсвечена${me.identified ? '. Напоминания о её матчах придут в Telegram.' : '.'}</div>
+
+            <label class="sanction-label">🔔 Уведомления в Telegram</label>
+            <label class="switch-row">
+                <input type="checkbox" id="notify-toggle" ${me.notifications ? 'checked' : ''} ${me.identified ? '' : 'disabled'} onchange="setSetting('notifications', this.checked)">
+                <span>Напоминания о матчах моей команды и об открытии голосования</span>
+            </label>
+            ${me.identified ? '' : '<div class="sanction-hint">Доступно при входе из Telegram.</div>'}
+        </div>`;
+}
+
+function setSetting(name, value) {
+    if (name === 'theme') {
+        safeStorage('theme', value === 'auto' ? null : value);
+        if (window.applyTheme) window.applyTheme();
+        openSettingsModal();
+    } else if (name === 'notifications') {
+        saveMeSettings({ notifications: !!value });
+    } else if (name === 'lang') {
+        safeStorage('lang', value);
+        saveMeSettings({ lang: value }).finally(() => location.reload());   // страница перерисуется на выбранном языке
+    }
+}
+
 // Внешние ссылки: внутри Telegram открываем средствами Mini App (t.me — в самом Telegram, остальное — в браузере),
 // вне Telegram — обычной новой вкладкой
 function openExternalLink(event, url) {
@@ -500,11 +613,11 @@ async function fetchStandings(leagueId) {
                             <th>О</th>
                         </tr>
                         ${data.map((row, index) => `
-                            <tr class="${zoneClass(index + 1)}">
+                            <tr class="${zoneClass(index + 1)} ${row.team_id === myTeamId ? "my-team" : ""}">
                                 <td><b>${index + 1}</b></td>
                                 <td style="text-align: left; cursor: pointer; color: var(--heading); font-weight: 600;" onclick="openTeamProfile(${row.team_id})">
                                     <img loading="lazy" decoding="async" src="${mediaUrl(row.logo_url)}" width="22" height="22" style="object-fit: contain; vertical-align: middle; margin-right: 6px;">
-                                    ${row.team_name}${row.withdrawn ? '<span class="badge-withdrawn">снята</span>' : ''}
+                                    ${row.team_id === myTeamId ? '⭐ ' : ''}${row.team_name}${row.withdrawn ? '<span class="badge-withdrawn">снята</span>' : ''}
                                 </td>
                                 <td>${row.played}</td>
                                 <td>${row.wins}</td>
@@ -760,7 +873,7 @@ function stopVoteTimer() {
 }
 
 function formatVoteDate(iso) {
-    return new Date(iso).toLocaleDateString('ru-RU', { weekday: 'long', day: 'numeric', month: 'long', timeZone: TOURNAMENT_TZ });
+    return new Date(iso).toLocaleDateString(window.APP_LANG === 'kk' ? 'kk-KZ' : 'ru-RU', { weekday: 'long', day: 'numeric', month: 'long', timeZone: TOURNAMENT_TZ });
 }
 
 function formatCountdown(ms) {
@@ -904,7 +1017,10 @@ async function openTeamProfile(teamId) {
                             ${team.withdrawn && team.withdrawal_note ? `<div style="font-size: 11px; color: var(--text-3); margin-top: 2px;">Решение Оргкомитета: ${esc(team.withdrawal_note)}</div>` : ''}
                         </div>
                     </div>
-                    <button onclick="document.getElementById('team-modal').style.display='none'" style="background: none; border: none; font-size: 22px; cursor: pointer;">✕</button>
+                    <div style="display: flex; align-items: center; gap: 4px;">
+                        <button onclick="toggleMyTeam(${team.id})" title="Моя команда" style="background: none; border: none; font-size: 22px; cursor: pointer;">${team.id === myTeamId ? '⭐' : '☆'}</button>
+                        <button onclick="document.getElementById('team-modal').style.display='none'" style="background: none; border: none; font-size: 22px; cursor: pointer;">✕</button>
+                    </div>
                 </div>
 
                 <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 12px; text-align: center;">

@@ -71,6 +71,9 @@
     --glow: 0 0 18px rgba(79, 140, 255, 0.45);
     --glow-soft: 0 4px 16px rgba(79, 140, 255, 0.28);
     --overlay: rgba(3, 5, 14, 0.74);
+    --accent-ink: #cfe0ff;                       /* текст на подсвеченном синем */
+    --zebra: rgba(255, 255, 255, 0.025);
+    --hairline: rgba(255, 255, 255, 0.04);
 
     /* Типографика */
     --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
@@ -87,6 +90,54 @@
     --muted-text: var(--text-3);
     --border-color: var(--border);
 }
+
+/* ==========================================================================
+   Светлая тема (включается атрибутом <html data-theme="light">: по настройкам Telegram, системы или вручную)
+   Те же токены — другие значения, поэтому вся вёрстка работает без изменений.
+   ========================================================================== */
+:root[data-theme="light"] {
+    color-scheme: light;
+    --bg: #eef2fb;
+    --bg-glow-blue: rgba(79, 140, 255, 0.28);
+    --bg-glow-orange: rgba(251, 146, 60, 0.20);
+    --bg-glow-violet: rgba(99, 102, 241, 0.12);
+    --surface: rgba(255, 255, 255, 0.74);
+    --surface-solid: #ffffff;
+    --surface-2: rgba(15, 23, 42, 0.04);
+    --surface-3: rgba(15, 23, 42, 0.08);
+    --border: rgba(15, 23, 42, 0.10);
+    --border-strong: rgba(15, 23, 42, 0.18);
+    --text: #0f172a;
+    --text-2: #475569;
+    --text-3: #7b8aa3;
+    --heading: #1e40af;
+    --accent: #2563eb;
+    --accent-2: #0284c7;
+    --orange: #ea580c;
+    --gold: #d97706;
+    --green: #15803d;
+    --green-bg: rgba(22, 163, 74, 0.10);
+    --green-border: rgba(22, 163, 74, 0.30);
+    --red: #dc2626;
+    --red-bg: rgba(220, 38, 38, 0.07);
+    --red-soft: rgba(220, 38, 38, 0.14);
+    --red-border: rgba(220, 38, 38, 0.28);
+    --amber: #b45309;
+    --amber-bg: rgba(217, 119, 6, 0.09);
+    --amber-soft: rgba(217, 119, 6, 0.16);
+    --amber-border: rgba(217, 119, 6, 0.32);
+    --shadow: 0 8px 24px rgba(15, 23, 42, 0.10);
+    --shadow-lg: 0 20px 50px rgba(15, 23, 42, 0.22);
+    --glow: 0 0 14px rgba(37, 99, 235, 0.30);
+    --glow-soft: 0 4px 14px rgba(37, 99, 235, 0.25);
+    --overlay: rgba(15, 23, 42, 0.45);
+    --accent-ink: #1e40af;
+    --zebra: rgba(15, 23, 42, 0.03);
+    --hairline: rgba(15, 23, 42, 0.06);
+}
+:root[data-theme="light"] .header-logo { filter: drop-shadow(0 2px 6px rgba(15, 23, 42, 0.25)); }
+:root[data-theme="light"] .app-header { background: linear-gradient(135deg, rgba(79, 140, 255, 0.20) 0%, rgba(255, 255, 255, 0.74) 60%), var(--surface); }
+:root[data-theme="light"] .app-title { color: var(--text); }
 
 * { box-sizing: border-box; }
 html { background: var(--bg); min-height: 100%; }
@@ -175,7 +226,7 @@ img { max-width: 100%; }
 }
 .subtab-btn:hover { color: var(--text); border-color: var(--border-strong); }
 .subtab-btn.active {
-    background: rgba(79, 140, 255, 0.18); color: #cfe0ff; border-color: rgba(79, 140, 255, 0.6);
+    background: rgba(79, 140, 255, 0.18); color: var(--accent-ink); border-color: rgba(79, 140, 255, 0.6);
     box-shadow: 0 0 14px rgba(79, 140, 255, 0.25);
 }
 
@@ -195,8 +246,8 @@ table { width: 100%; border-collapse: collapse; font-size: 13px; white-space: no
 th, td { padding: 9px 6px; text-align: center; }
 th { color: var(--text-3); font-weight: 600; border-bottom: 1px solid var(--border); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.6px; }
 td:nth-child(2) { text-align: left; }
-tr:nth-child(even) td { background: rgba(255, 255, 255, 0.025); }
-tr td { border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
+tr:nth-child(even) td { background: var(--zebra); }
+tr td { border-bottom: 1px solid var(--hairline); }
 
 /* ---------- Матчи ---------- */
 .match-card {
@@ -238,7 +289,6 @@ input[type="file"]::file-selector-button {
     background: var(--surface-3); color: var(--text); border: 1px solid var(--border-strong);
     border-radius: 8px; padding: 6px 10px; margin-right: 10px; cursor: pointer; font-family: var(--font);
 }
-input[type="date"] { color-scheme: dark; }
 button { font-family: var(--font); transition: filter .15s, transform .1s; }
 button:hover:not(:disabled) { filter: brightness(1.1); }
 button:active:not(:disabled) { transform: translateY(1px); }
@@ -254,7 +304,7 @@ button:active:not(:disabled) { transform: translateY(1px); }
 .btn-danger { background: var(--red-bg); border-color: var(--red-border); color: var(--red); }
 
 .badge { display: inline-block; padding: 3px 9px; border-radius: var(--radius-pill); font-size: var(--fs-xs); font-weight: 700; }
-.badge-accent { background: rgba(79, 140, 255, 0.18); color: #cfe0ff; }
+.badge-accent { background: rgba(79, 140, 255, 0.18); color: var(--accent-ink); }
 .badge-success { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
 .badge-warn { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
 .badge-danger { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
@@ -270,16 +320,17 @@ button:active:not(:disabled) { transform: translateY(1px); }
 }
 
 /* ---------- Окна ---------- */
-#team-modal, #player-modal, #admin-modal, #sanction-modal, #schedule-modal, #about-modal {
+#team-modal, #player-modal, #admin-modal, #sanction-modal, #schedule-modal, #about-modal, #settings-modal {
     -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
 }
-#team-modal > div, #player-modal > div, #admin-modal > div, #sanction-modal > div, #schedule-modal > div, #about-modal > div {
+#team-modal > div, #player-modal > div, #admin-modal > div, #sanction-modal > div, #schedule-modal > div, #about-modal > div, #settings-modal > div {
     border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg);
     background-image: linear-gradient(160deg, rgba(79, 140, 255, 0.10), transparent 40%);
 }
 
 /* ---------- «О турнире» ---------- */
-.about-btn { margin-top: 8px; padding: 5px 12px; border-radius: var(--radius-pill); border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-2); font-size: var(--fs-xs); font-weight: 600; cursor: pointer; }
+.header-actions { display: flex; gap: 6px; justify-content: center; flex-wrap: wrap; margin-top: 8px; }
+.about-btn { margin-top: 0; padding: 5px 12px; border-radius: var(--radius-pill); border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-2); font-size: var(--fs-xs); font-weight: 600; cursor: pointer; }
 .about-btn:hover { color: var(--text); border-color: var(--accent); }
 .about-sec { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; }
 .about-sec summary { padding: 11px 12px; font-size: 13px; font-weight: 700; cursor: pointer; list-style: none; }
@@ -294,6 +345,18 @@ button:active:not(:disabled) { transform: translateY(1px); }
 .about-social-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
 .about-social-row { display: flex; gap: 8px; flex-wrap: wrap; }
 .about-social-row .btn { flex: 1 1 140px; text-decoration: none; }
+
+/* ---------- Моя команда, настройки ---------- */
+.my-team-card { display: flex; align-items: center; gap: 12px; padding: 10px 12px; margin-bottom: 12px; border-radius: var(--radius-md); cursor: pointer;
+    background: linear-gradient(135deg, rgba(79, 140, 255, 0.16), transparent 70%), var(--surface); border: 1px solid rgba(79, 140, 255, 0.45); box-shadow: var(--glow-soft); }
+.my-team-title { font-size: 13px; font-weight: 700; color: var(--heading); }
+.my-team-sub { font-size: var(--fs-xs); color: var(--text-2); margin-top: 2px; line-height: 1.4; }
+tr.my-team td { box-shadow: inset 0 1px 0 var(--accent), inset 0 -1px 0 var(--accent); font-weight: 700; }
+.seg { display: flex; gap: 4px; padding: 3px; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--border); }
+.seg-btn { flex: 1; padding: 8px 6px; border: none; border-radius: 8px; background: transparent; color: var(--text-2); font-size: var(--fs-sm); font-weight: 600; cursor: pointer; }
+.seg-btn.active { background: var(--accent-grad); color: #fff; box-shadow: var(--glow-soft); }
+.switch-row { display: flex; gap: 10px; align-items: flex-start; font-size: 13px; color: var(--text-2); cursor: pointer; }
+.switch-row input { width: 18px; height: 18px; margin-top: 1px; accent-color: var(--accent); flex-shrink: 0; }
 
 /* ---------- Снятие команды ---------- */
 .badge-withdrawn { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: var(--radius-pill); background: var(--red-bg); border: 1px solid var(--red-border); color: var(--red); font-size: 10px; font-weight: 700; }
