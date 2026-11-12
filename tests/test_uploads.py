@@ -128,3 +128,24 @@ def test_rename_team_keeps_old_name_as_alias(client, mini, media_dirs):
     # возврат к старому названию убирает его из псевдонимов
     r = client.post(f"/api/teams/{team}/rename", headers=ADMIN(), json={"name": "Команда A"})
     assert r.json()["aliases"] == ["Команда A TEAM"]
+
+
+def test_player_names_are_surname_and_name_only(client, mini, media_dirs):
+    """Отчество не храним: в составе — «Фамилия Имя»; файл фото с отчеством находит того же игрока."""
+    d = docx.Document(); t = d.add_table(rows=4, cols=2)
+    t.cell(0, 0).text, t.cell(0, 1).text = "№", "Ф И О"
+    for i, name in enumerate(["Сидоров Пётр Иванович", "Madaminov Jakhongir Makhmudjon ugli", "Намазов Эминали"], 1):
+        t.cell(i, 0).text, t.cell(i, 1).text = str(i), name
+    b = io.BytesIO(); d.save(b)
+    r = client.post("/api/upload-roster", headers=ADMIN(), data={"league_name": "Третья лига", "team_name": "Отчества"},
+                    files=[("file", ("z.docx", b.getvalue(), "application/octet-stream"))])
+    assert r.status_code == 200 and players_of(client, "Отчества") == 3
+    names = {p["name"] for l in client.get("/api/leagues").json() for tm in l["teams"] if tm["name"] == "Отчества" for p in tm["players"]}
+    assert names == {"Сидоров Пётр", "Madaminov Jakhongir", "Намазов Эминали"}
+    # повторная загрузка того же файла (или с отчеством) не создаёт дублей
+    client.post("/api/upload-roster", headers=ADMIN(), data={"league_name": "Третья лига", "team_name": "Отчества"},
+                files=[("file", ("z.docx", b.getvalue(), "application/octet-stream"))])
+    assert players_of(client, "Отчества") == 3
+    # фото с отчеством в имени файла
+    r = upload(client, [("сидоров пётр иванович.jpg", noise(600, 600, "JPEG"))])
+    assert "Фото игроков: 1" in r.json()["message"]

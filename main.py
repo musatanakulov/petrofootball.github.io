@@ -112,6 +112,14 @@ def norm(text: Optional[str]) -> str:
     text = unicodedata.normalize("NFC", str(text)).replace("_", " ")
     return re.sub(r"\s+", " ", text).strip().casefold()
 
+def short_name(name: Optional[str]) -> str:
+    """Игрок хранится как «Фамилия Имя»: отчество (третье слово и далее) отбрасываем."""
+    return " ".join(re.sub(r"\s+", " ", str(name or "")).strip().split(" ")[:2])
+
+def same_person(a: Optional[str], b: Optional[str]) -> bool:
+    """«Иванов Иван» и «Иванов Иван Иванович» — один и тот же игрок (файл фото или состав могут быть с отчеством)."""
+    return bool(norm(short_name(a))) and norm(short_name(a)) == norm(short_name(b))
+
 def team_matches(team, name: str) -> bool:
     """Название совпадает с текущим или с одним из прежних названий команды (без учёта регистра и пробелов)."""
     wanted = norm(name)
@@ -329,7 +337,7 @@ def upload_media_bulk(
         
         matched_player = None
         for player in all_players:
-            if norm(player.name) == clean_name:
+            if same_person(player.name, clean_name):
                 matched_player = player
                 break
 
@@ -469,9 +477,9 @@ def upload_team_roster(
             if len(cells) >= 2:
                 row_num, p_name = cells[0], cells[1]
                 if row_num.isdigit() and p_name and p_name != "Ф И О":
-                    existing = next((p for p in all_players if norm(p.name) == norm(p_name)), None)
+                    existing = next((p for p in all_players if same_person(p.name, p_name)), None)
                     if not existing:
-                        new_p = Player(name=p_name.strip(), number=int(row_num), position="Игрок", team_id=matched_team.id)
+                        new_p = Player(name=short_name(p_name), number=int(row_num), position="Игрок", team_id=matched_team.id)
                         db.add(new_p)
                         all_players.append(new_p)
                         added += 1
