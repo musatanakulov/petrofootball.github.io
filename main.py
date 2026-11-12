@@ -1,14 +1,14 @@
 from fastapi import FastAPI, Depends, HTTPException, File, UploadFile, Form, Header, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
-from fastapi.responses import FileResponse
+from fastapi.responses import FileResponse, JSONResponse
 from sqlalchemy.orm import Session
 from sqlalchemy import func
 from sqlalchemy.exc import IntegrityError
 from database import SessionLocal, init_db, mark_backfill_done, League, Team, Player, Match, MatchEvent, PlayerVote, Sanction, RoundClosure, Subscriber
 import backup
 from images import optimize_image, MAX_UPLOAD_BYTES, LOGO_MAX_SIDE, PHOTO_MAX_SIDE
-from config import BOT_TOKEN, ADMIN_TELEGRAM_IDS, ALLOW_DEV_ADMIN, INIT_DATA_MAX_AGE, TZ_OFFSET_HOURS
+from config import BOT_TOKEN, ADMIN_TELEGRAM_IDS, ALLOW_DEV_ADMIN, INIT_DATA_MAX_AGE, TZ_OFFSET_HOURS, CORS_ORIGINS, ENABLE_DOCS
 from datetime import date, datetime, timedelta, timezone
 from pydantic import BaseModel, Field
 from typing import List, Optional
@@ -25,23 +25,64 @@ import pandas as pd
 import io
 import os
 import shutil
+import logging
+import logging.handlers
 
-app = FastAPI(title="Кубок Акима города Петропавловск API")
+app = FastAPI(
+    title="Кубок Акима города Петропавловск API",
+    docs_url="/docs" if ENABLE_DOCS else None,
+    redoc_url=None,
+    openapi_url="/openapi.json" if ENABLE_DOCS else None,
+)
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=False,
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Журнал ошибок: logs/app.log (ротация 1 МБ x 5). Без токенов и персональных данных.
+_LOG_DIR = os.path.join(os.path.dirname(os.path.abspath(__file__)), "logs")
+os.makedirs(_LOG_DIR, exist_ok=True)
+logger = logging.getLogger("petrofoot")
+if not logger.handlers:
+    _h = logging.handlers.RotatingFileHandler(os.path.join(_LOG_DIR, "app.log"), maxBytes=1_000_000, backupCount=5, encoding="utf-8")
+    _h.setFormatter(logging.Formatter("%(asctime)s %(levelname)s %(message)s"))
+    logger.addHandler(_h)
+    logger.setLevel(logging.INFO)
+
+
+@app.exception_handler(Exception)
+async def unhandled_error(request: Request, exc: Exception):
+    logger.error("500 %s %s: %r", request.method, request.url.path, exc, exc_info=exc)
+    return JSONResponse(status_code=500, content={"detail": "Внутренняя ошибка сервера. Попробуйте позже."})
+
+
+@app.middleware("http")
+async def security_headers(request: Request, call_next):
+    response = await call_next(request)
+    # X-Frame-Options не ставим: Telegram показывает Mini App во фрейме
+    response.headers.setdefault("X-Content-Type-Options", "nosniff")
+    response.headers.setdefault("Referrer-Policy", "strict-origin-when-cross-origin")
+    return response
+
+
+class MediaFiles(StaticFiles):
+    """Логотипы и фото: браузер держит их час без запроса, потом сверяется по ETag."""
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        if response.status_code == 200:
+            response.headers["Cache-Control"] = "public, max-age=3600"
+        return response
 
 BASE_DIR = os.path.dirname(os.path.abspath(__file__))
 LOGO_DIR = os.path.join(BASE_DIR, "static", "logos")
 PLAYER_DIR = os.path.join(BASE_DIR, "static", "players")
 os.makedirs(LOGO_DIR, exist_ok=True)
 os.makedirs(PLAYER_DIR, exist_ok=True)
-app.mount("/static", StaticFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
+app.mount("/static", MediaFiles(directory=os.path.join(BASE_DIR, "static")), name="static")
 
 # Старый формат ссылок на медиа (до перехода на относительные пути)
 LEGACY_MEDIA_PREFIX = "http://127.0.0.1:8000"

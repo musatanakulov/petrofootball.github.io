@@ -6,3 +6,8 @@ __pycache__/
 backups/
 tests/__pycache__/
 tunnel.log
+
+# Журналы и файлы WAL
+logs/
+*.db-wal
+*.db-shm

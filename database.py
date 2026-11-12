@@ -1,6 +1,6 @@
 import os
 from datetime import datetime, timezone
-from sqlalchemy import create_engine, Column, Integer, String, ForeignKey, DateTime, Date, Boolean, UniqueConstraint, inspect, text
+from sqlalchemy import event, create_engine, Column, Integer, String, ForeignKey, DateTime, Date, Boolean, UniqueConstraint, inspect, text
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, relationship
 
@@ -8,6 +8,20 @@ from sqlalchemy.orm import sessionmaker, relationship
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./football_tournament.db")
 
 engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False, "timeout": 30})
+
+
+@event.listens_for(engine, "connect")
+def _sqlite_pragmas(dbapi_connection, _record):
+    """WAL: чтение не блокируется записью (сервер и бот работают с одним файлом); ожидание блокировки до 30 с."""
+    if not DATABASE_URL.startswith("sqlite"):
+        return
+    cur = dbapi_connection.cursor()
+    cur.execute("PRAGMA journal_mode=WAL")
+    cur.execute("PRAGMA synchronous=NORMAL")
+    cur.execute("PRAGMA busy_timeout=30000")
+    cur.close()
+
+
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 

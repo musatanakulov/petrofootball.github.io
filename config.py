@@ -41,3 +41,10 @@ INIT_DATA_MAX_AGE = int(os.getenv("INIT_DATA_MAX_AGE", "86400"))
 
 # Адрес Mini App для кнопки бота
 WEBAPP_URL = os.getenv("WEBAPP_URL", "https://musatanakulov.github.io/petrofootball.github.io/")
+
+# Домены, которым разрешено обращаться к API из браузера (через запятую). По умолчанию — любые.
+# На сервере: CORS_ORIGINS=https://petrofootball.kz
+CORS_ORIGINS = [x.strip() for x in os.getenv("CORS_ORIGINS", "*").split(",") if x.strip()] or ["*"]
+
+# 1 = открыть страницу документации API (/docs). На публичном сервере не включать.
+ENABLE_DOCS = os.getenv("ENABLE_DOCS", "0").strip() == "1"
