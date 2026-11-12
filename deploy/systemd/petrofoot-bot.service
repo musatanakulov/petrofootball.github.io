@@ -1,0 +1,23 @@
+# Telegram-бот (уведомления, кнопка «Турнир»). Положить в /etc/systemd/system/petrofoot-bot.service
+#   systemctl daemon-reload && systemctl enable --now petrofoot-bot
+# Запускайте ТОЛЬКО ОДИН экземпляр бота (иначе Telegram отвечает 409 Conflict).
+# Перед запуском на сервере остановите бота на своём компьютере.
+[Unit]
+Description=Petrofoot Telegram bot
+After=network-online.target petrofoot.service
+Wants=network-online.target
+
+[Service]
+User=petrofoot
+Group=petrofoot
+WorkingDirectory=/opt/petrofoot
+ExecStart=/opt/petrofoot/venv/bin/python bot.py
+Restart=always
+RestartSec=5
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ReadWritePaths=/opt/petrofoot
+
+[Install]
+WantedBy=multi-user.target

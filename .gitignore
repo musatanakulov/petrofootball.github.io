@@ -11,3 +11,4 @@ tunnel.log
 logs/
 *.db-wal
 *.db-shm
+static/players/
