@@ -103,3 +103,28 @@ def test_roster_logo_is_compressed_and_validated(client, media_dirs):
     team = next(t for l in client.get("/api/leagues").json() for t in l["teams"] if t["name"] == "Логотип-тест")
     assert team["logo_url"].endswith(".webp")
     assert upload_roster(client, "Логотип-тест", 1, logo=b"not an image").status_code == 400
+
+
+def test_rename_team_keeps_old_name_as_alias(client, mini, media_dirs):
+    """«NOMAD» -> «NOMAD TEAM»: старые файлы и графики со старым названием не создают дубль."""
+    team = mini["teams"]["A"]
+    assert client.post(f"/api/teams/{team}/rename", json={"name": "Новое имя"}).status_code == 403         # только админ
+    assert client.post(f"/api/teams/{team}/rename", headers=ADMIN(), json={"name": "   "}).status_code in (400, 422)
+    assert client.post(f"/api/teams/{team}/rename", headers=ADMIN(), json={"name": "команда b"}).status_code == 409   # такая уже есть
+    r = client.post(f"/api/teams/{team}/rename", headers=ADMIN(), json={"name": "Команда  A  TEAM"})
+    assert r.status_code == 200 and r.json()["aliases"] == ["Команда A"]
+    teams = {t["id"]: t["name"] for lg in client.get("/api/leagues").json() for t in lg["teams"]}
+    assert teams[team] == "Команда A TEAM"
+    # файл логотипа со СТАРЫМ названием находит ту же команду
+    r = upload(client, [("КОМАНДА a.png", noise(400, 400, "PNG"))])
+    assert "логотипов команд: 1" in r.json()["message"]
+    renamed = next(t for lg in client.get("/api/leagues").json() for t in lg["teams"] if t["id"] == team)
+    assert renamed["logo_url"].endswith(".webp")
+    # загрузка состава по старому названию не создаёт вторую команду
+    count = lambda: sum(len(lg["teams"]) for lg in client.get("/api/leagues").json())   # noqa: E731
+    before = count()
+    assert upload_roster(client, "Команда A", 3, league="Первая лига").status_code == 200
+    assert count() == before
+    # возврат к старому названию убирает его из псевдонимов
+    r = client.post(f"/api/teams/{team}/rename", headers=ADMIN(), json={"name": "Команда A"})
+    assert r.json()["aliases"] == ["Команда A TEAM"]

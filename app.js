@@ -75,7 +75,7 @@ function renderSubtabs() {
 
     container.innerHTML = leaguesData.map(l => `
         <button class="subtab-btn ${l.id === currentLeagueId ? 'active' : ''}" onclick="selectLeague(${l.id})">
-            ${l.name}
+            ${esc(l.name)}
         </button>
     `).join('');
 }
@@ -195,7 +195,7 @@ async function fetchMatches(leagueId) {
             <div class="match-card">
                 <div class="match-team" onclick="openTeamProfile(${m.home_team_id})">
                     <img loading="lazy" decoding="async" src="${mediaUrl(m.home_logo)}">
-                    <span style="font-size: 12px; font-weight: 700;">${m.home_team}</span>
+                    <span style="font-size: 12px; font-weight: 700;">${esc(m.home_team)}</span>
                 </div>
                 <div style="text-align: center;">
                     ${m.date_tbd
@@ -204,7 +204,7 @@ async function fetchMatches(leagueId) {
                            <span class="match-time" style="font-size: 11px; color: var(--text-2);">${esc(m.weekday ? m.weekday + ', ' : '')}${esc(m.date)}</span>`}
                 </div>
                 <div class="match-team away" onclick="openTeamProfile(${m.away_team_id})">
-                    <span style="font-size: 12px; font-weight: 700;">${m.away_team}</span>
+                    <span style="font-size: 12px; font-weight: 700;">${esc(m.away_team)}</span>
                     <img loading="lazy" decoding="async" src="${mediaUrl(m.away_logo)}">
                 </div>
             </div>
@@ -257,16 +257,16 @@ async function fetchResults(leagueId) {
             <div class="match-card ${m.annulled ? 'annulled' : ''}" ${(isAdmin() && !m.annulled) ? `onclick="openResultModal(${m.id})" style="cursor:pointer;" title="Ввести результат"` : ''}>
                 <div class="match-team" onclick="event.stopPropagation(); openTeamProfile(${m.home_team_id})">
                     <img loading="lazy" decoding="async" src="${mediaUrl(m.home_logo)}">
-                    <span style="font-size: 12px; font-weight: 700;">${m.home_team}</span>
+                    <span style="font-size: 12px; font-weight: 700;">${esc(m.home_team)}</span>
                 </div>
                 <div style="text-align: center;">
-                    <span class="match-score" style="background: ${m.status === 'finished' ? 'var(--accent)' : 'var(--border)'}; color: ${m.status === 'finished' ? 'var(--gold)' : 'var(--text-2)'};">
+                    <span class="match-score clickable" title="Подробности матча" onclick="event.stopPropagation(); openMatchDetails(${m.id})" style="background: ${m.status === 'finished' ? 'var(--accent)' : 'var(--border)'}; color: ${m.status === 'finished' ? 'var(--gold)' : 'var(--text-2)'};">
                         ${m.status === 'finished' ? `${m.home_score} : ${m.away_score}` : '- : -'}
                     </span><br>
                     <span class="match-time" style="font-size: 11px;">${m.annulled ? 'Аннулирован' : (m.status === 'finished' ? (m.technical ? 'Технический результат' : (m.man_of_the_match ? `⭐ ${m.man_of_the_match}` : 'Сыграно')) : (m.date_tbd ? (isAdmin() ? 'Нажмите для ввода счета' : 'Не сыгран') : esc(whenLabel(m))))}</span>
                 </div>
                 <div class="match-team away" onclick="event.stopPropagation(); openTeamProfile(${m.away_team_id})">
-                    <span style="font-size: 12px; font-weight: 700;">${m.away_team}</span>
+                    <span style="font-size: 12px; font-weight: 700;">${esc(m.away_team)}</span>
                     <img loading="lazy" decoding="async" src="${mediaUrl(m.away_logo)}">
                 </div>
             </div>
@@ -292,6 +292,52 @@ async function toggleRoundClosure(close) {
 function selectRound(roundName) {
     currentRound = roundName;
     fetchResults(currentLeagueId);
+}
+
+// --- ПОДРОБНОСТИ МАТЧА: счёт, игрок матча и события (голы, карточки) — доступно всем ---
+const EVENT_ICONS = { goal: '⚽', own_goal: '⚽🥅', yellow_card: '🟨', second_yellow: '🟨→🟥', red_card: '🟥' };
+const EVENT_LABELS = { goal: '', own_goal: 'автогол', yellow_card: '', second_yellow: 'вторая жёлтая → красная', red_card: 'красная карточка' };
+
+async function openMatchDetails(matchId) {
+    try {
+        const res = await fetch(`${API_URL}/matches/${matchId}`);
+        if (!res.ok) return;
+        const m = await res.json();
+        const finished = m.status === 'finished';
+
+        // события по минутам (без минуты — в конце, в порядке ввода)
+        const events = m.events.map((e, i) => ({ ...e, i })).sort((a, b) => (a.minute ?? 999) - (b.minute ?? 999) || a.i - b.i);
+        const cell = (e) => `${EVENT_ICONS[e.effective_type] || ''} <b>${esc(e.player_name)}</b>${EVENT_LABELS[e.effective_type] ? ` <span class="mt-note">${EVENT_LABELS[e.effective_type]}</span>` : ''}`;
+        const timeline = events.length ? events.map(e => {
+            const home = e.team_id === m.home_team_id;
+            return `<div class="mt-row"><div class="mt-home">${home ? cell(e) : ''}</div>
+                <div class="mt-min ${e.minute != null ? '' : 'empty'}">${e.minute != null ? e.minute + "'" : ''}</div>
+                <div class="mt-away">${home ? '' : cell(e)}</div></div>`;
+        }).join('') : `<p class="no-data" style="padding: 8px;">${m.technical ? 'Технический результат: события не вносятся.' : (finished ? 'События не внесены' : 'Матч ещё не сыгран')}</p>`;
+
+        const badge = m.annulled ? '<span class="badge badge-danger">Аннулирован</span>'
+            : (m.technical ? '<span class="badge badge-warn">Технический результат</span>' : '');
+        const modal = ensureModal('match-modal', 1500);
+        modal.innerHTML = `
+            <div style="background: var(--surface-solid); width: 100%; max-width: 460px; border-radius: 16px; padding: 20px; max-height: 90vh; overflow-y: auto;">
+                <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px;">
+                    <div>
+                        <h3 style="margin: 0; color: var(--heading);">Подробности матча</h3>
+                        <div style="font-size: 12px; color: var(--text-2); margin-top: 2px;">${esc(m.league)} · ${esc(m.round)} · ${esc(whenLabel(m))}</div>
+                    </div>
+                    <button onclick="document.getElementById('match-modal').style.display='none'" style="background: none; border: none; font-size: 22px; cursor: pointer;">✕</button>
+                </div>
+                <div class="mt-score">
+                    <div class="mt-team"><img loading="lazy" src="${mediaUrl(m.home_logo)}"><span>${esc(m.home_team)}</span></div>
+                    <div class="mt-result">${finished ? `${m.home_score} : ${m.away_score}` : '– : –'}</div>
+                    <div class="mt-team"><img loading="lazy" src="${mediaUrl(m.away_logo)}"><span>${esc(m.away_team)}</span></div>
+                </div>
+                ${badge ? `<div style="text-align: center; margin: 8px 0;">${badge}</div>` : ''}
+                ${m.man_of_the_match ? `<div class="mt-motm">⭐ Игрок матча: <b>${esc(m.man_of_the_match)}</b></div>` : ''}
+                <h4 style="margin: 14px 0 8px; color: var(--heading); font-size: 13px; border-top: 1px solid var(--border); padding-top: 10px;">События матча</h4>
+                ${timeline}
+            </div>`;
+    } catch (e) { console.error(e); }
 }
 
 // --- НАЗНАЧЕНИЕ ДАТЫ И ВРЕМЕНИ ТУРА (админ; расписание на неделю обычно назначается во вторник) ---
@@ -617,7 +663,7 @@ async function fetchStandings(leagueId) {
                                 <td><b>${index + 1}</b></td>
                                 <td style="text-align: left; cursor: pointer; color: var(--heading); font-weight: 600;" onclick="openTeamProfile(${row.team_id})">
                                     <img loading="lazy" decoding="async" src="${mediaUrl(row.logo_url)}" width="22" height="22" style="object-fit: contain; vertical-align: middle; margin-right: 6px;">
-                                    ${row.team_id === myTeamId ? '⭐ ' : ''}${row.team_name}${row.withdrawn ? '<span class="badge-withdrawn">снята</span>' : ''}
+                                    ${row.team_id === myTeamId ? '⭐ ' : ''}${esc(row.team_name)}${row.withdrawn ? '<span class="badge-withdrawn">снята</span>' : ''}
                                 </td>
                                 <td>${row.played}</td>
                                 <td>${row.wins}</td>
@@ -662,7 +708,7 @@ async function fetchScorers(leagueId) {
                 <div style="display: flex; flex-direction: column; gap: 6px;">
                     ${data.map((p, idx) => `
                         <div onclick="openPlayerProfile(${p.team_id}, ${p.player_id})" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; border: 1px solid var(--border); font-size: 14px; cursor: pointer;">
-                            <span><b>${idx + 1}.</b> ${p.player_name} <span style="color: var(--text-2); font-size: 12px;">(${p.team_name})</span></span>
+                            <span><b>${idx + 1}.</b> ${esc(p.player_name)} <span style="color: var(--text-2); font-size: 12px;">(${esc(p.team_name)})</span></span>
                             <span style="font-weight: 800; color: var(--amber); background: var(--amber-soft); padding: 2px 8px; border-radius: 6px;">
                                 ⚽ ${p.goals} ${p.own_goals > 0 ? `<span style="color:var(--red);">(-${p.own_goals})</span>` : ''}
                             </span>
@@ -1047,17 +1093,17 @@ async function openTeamProfile(teamId) {
                     ${team.matches && team.matches.length ? team.matches.map(m => `
                         <div style="display: flex; justify-content: space-between; align-items: center; padding: 6px 10px; background: var(--surface-2); border-radius: 8px; border: 1px solid var(--border); font-size: 11px;">
                             <div>
-                                <span style="font-weight: bold; color: var(--heading);">${m.round}</span><br>
+                                <span style="font-weight: bold; color: var(--heading);">${esc(m.round)}</span><br>
                                 <span style="color: var(--text-2);">${esc(whenLabel(m))}</span>
                             </div>
                             <div style="display: flex; align-items: center; gap: 6px;">
-                                <span style="font-weight: 600; text-align: right; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${m.is_home ? team.name : m.opponent_name}</span>
+                                <span style="font-weight: 600; text-align: right; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${esc(m.is_home ? team.name : m.opponent_name)}</span>
                                 <img loading="lazy" decoding="async" src="${mediaUrl(m.is_home ? team.logo_url : m.opponent_logo)}" width="20" height="20" style="object-fit: contain;">
-                                <span style="background: ${m.status === 'finished' ? 'var(--accent)' : 'var(--border)'}; color: ${m.status === 'finished' ? 'var(--gold)' : 'var(--text-2)'}; padding: 2px 6px; border-radius: 4px; font-weight: bold; white-space: nowrap;">
+                                <span title="Подробности матча" onclick="openMatchDetails(${m.id})" style="cursor: pointer; background: ${m.status === 'finished' ? 'var(--accent)' : 'var(--border)'}; color: ${m.status === 'finished' ? 'var(--gold)' : 'var(--text-2)'}; padding: 2px 6px; border-radius: 4px; font-weight: bold; white-space: nowrap;">
                                     ${m.annulled ? 'аннул.' : (m.status === 'finished' ? `${m.home_score} : ${m.away_score}${m.technical ? ' тех.' : ''}` : 'vs')}
                                 </span>
                                 <img loading="lazy" decoding="async" src="${mediaUrl(!m.is_home ? team.logo_url : m.opponent_logo)}" width="20" height="20" style="object-fit: contain;">
-                                <span style="font-weight: 600; text-align: left; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${!m.is_home ? team.name : m.opponent_name}</span>
+                                <span style="font-weight: 600; text-align: left; max-width: 90px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${esc(!m.is_home ? team.name : m.opponent_name)}</span>
                             </div>
                         </div>
                     `).join('') : '<p class="no-data">Матчи не найдены</p>'}
@@ -1067,7 +1113,7 @@ async function openTeamProfile(teamId) {
                 <div style="display: flex; flex-direction: column; gap: 6px;">
                     ${team.players.length ? team.players.map(p => `
                         <div onclick="openPlayerProfile(${team.id}, ${p.id})" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; border: 1px solid var(--border); font-size: 12px; cursor: pointer;">
-                            <span><b>${p.number}.</b> ${p.name}</span>
+                            <span><b>${p.number}.</b> ${esc(p.name)}</span>
                             <span style="white-space: nowrap; color: var(--text-2);">
                                 ⚽ ${p.stats.goals} ${p.stats.own_goals > 0 ? `(-${p.stats.own_goals})` : ''} | 🟨 ${p.stats.yellow_cards} | 🟥 ${p.stats.red_cards} | ⭐ ${p.stats.man_of_the_match}
                             </span>
@@ -1169,7 +1215,7 @@ function fillRosterLeagues() {
     const select = document.getElementById('roster-league');
     if (!select) return;
     const prev = select.value;
-    select.innerHTML = leaguesData.map(l => `<option value="${l.name}">${l.name}</option>`).join('');
+    select.innerHTML = leaguesData.map(l => `<option value="${esc(l.name)}">${esc(l.name)}</option>`).join('');
     if (prev && leaguesData.some(l => l.name === prev)) select.value = prev;
     fillRosterTeams();
 }
@@ -1179,7 +1225,7 @@ function fillRosterTeams() {
     const league = leaguesData.find(l => l.name === leagueName);
     const list = document.getElementById('roster-team-list');
     list.innerHTML = league
-        ? league.teams.map(t => `<option value="${t.name}">${t.players.length ? `игроков: ${t.players.length}` : 'состав не загружен'}</option>`).join('')
+        ? league.teams.map(t => `<option value="${esc(t.name)}">${t.players.length ? `игроков: ${t.players.length}` : 'состав не загружен'}</option>`).join('')
         : '';
 }
 
@@ -1292,8 +1338,8 @@ async function openPlayerProfile(teamId, playerId) {
                 
                 <img src="${photoUrl}" style="width: 110px; height: 110px; border-radius: 50%; object-fit: cover; border: 4px solid var(--accent); margin-bottom: 12px; background: var(--surface-2);">
                 
-                <h2 style="margin: 0 0 6px 0; color: var(--heading); font-size: 18px; line-height: 1.2;">${p.name}</h2>
-                <p style="margin: 0 0 20px 0; font-size: 14px; color: var(--text-2); font-weight: 500;">№ ${p.number} | ${team.name}</p>
+                <h2 style="margin: 0 0 6px 0; color: var(--heading); font-size: 18px; line-height: 1.2;">${esc(p.name)}</h2>
+                <p style="margin: 0 0 20px 0; font-size: 14px; color: var(--text-2); font-weight: 500;">№ ${p.number} | ${esc(team.name)}</p>
                 
                 <div style="display: grid; grid-template-columns: repeat(2, 1fr); gap: 10px; text-align: left;">
                     <div style="background: var(--surface-2); padding: 12px; border-radius: 10px; border: 1px solid var(--border);">
@@ -1362,12 +1408,12 @@ async function openResultModal(matchId) {
                 <div class="warn-banner">⛔ Не имеют права играть в этом матче: <b>${suspendedList.map(s => esc(s.player_name)).join(', ')}</b>.
                     Участие дисквалифицированного игрока — техническое поражение 0:5 (регламент, ст. 3.9).</div>` : ''}
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 16px; font-weight: bold;">
-                    <div>${match.home_team}</div>
+                    <div>${esc(match.home_team)}</div>
                     <div style="display: flex; gap: 6px; align-items: center;">
                         <input type="number" id="home-score-input" value="${match.home_score}" min="0" max="99" step="1" inputmode="numeric" onkeydown="blockNonDigitKeys(event)" oninput="clampScoreInput(this)" style="width: 45px; text-align:center; font-size:16px;" /> :
                         <input type="number" id="away-score-input" value="${match.away_score}" min="0" max="99" step="1" inputmode="numeric" onkeydown="blockNonDigitKeys(event)" oninput="clampScoreInput(this)" style="width: 45px; text-align:center; font-size:16px;" />
                     </div>
-                    <div>${match.away_team}</div>
+                    <div>${esc(match.away_team)}</div>
                 </div>
 
                 <div class="tech-box">
@@ -1385,7 +1431,7 @@ async function openResultModal(matchId) {
                     <label style="font-size: 12px; font-weight: bold; color: var(--heading);">⭐ Игрок матча (MOTM):</label>
                     <select id="motm-player-select" style="width: 100%; padding: 6px; margin-top: 4px; border-radius: 6px; border: 1px solid var(--border-strong);">
                         <option value="">-- Никто --</option>
-                        ${allPlayers.map(p => `<option value="${p.id}" ${match.man_of_the_match === p.name ? 'selected' : ''}>${mark(p)}${p.name}</option>`).join('')}
+                        ${allPlayers.map(p => `<option value="${p.id}" ${match.man_of_the_match === p.name ? 'selected' : ''}>${mark(p)}${esc(p.name)}</option>`).join('')}
                     </select>
                 </div>
 
@@ -1394,8 +1440,8 @@ async function openResultModal(matchId) {
 
                 <div style="background: var(--surface-2); padding: 10px; border-radius: 8px; border: 1px solid var(--border); margin-bottom: 16px;">
                     <select id="event-team" style="width: 100%; padding: 6px; margin-bottom: 6px; border-radius: 6px;" onchange="updatePlayerSelects()">
-                        <option value="${match.home_team_id}">${match.home_team}</option>
-                        <option value="${match.away_team_id}">${match.away_team}</option>
+                        <option value="${match.home_team_id}">${esc(match.home_team)}</option>
+                        <option value="${match.away_team_id}">${esc(match.away_team)}</option>
                     </select>
                     <select id="event-player" style="width: 100%; padding: 6px; margin-bottom: 6px; border-radius: 6px;"></select>
                     <select id="event-type" style="width: 100%; padding: 6px; margin-bottom: 6px; border-radius: 6px;">
@@ -1490,7 +1536,7 @@ function updatePlayerSelects() {
     const team = (teamId === teams.home.id) ? teams.home : teams.away;
     const playerSelect = document.getElementById('event-player');
 
-    playerSelect.innerHTML = team.players.map(p => `<option value="${p.id}">${(window._suspended || {})[p.id] ? '⛔ ' : ''}${p.number}. ${p.name}</option>`).join('');
+    playerSelect.innerHTML = team.players.map(p => `<option value="${p.id}">${(window._suspended || {})[p.id] ? '⛔ ' : ''}${p.number}. ${esc(p.name)}</option>`).join('');
 }
 
 let tempMatchEvents = [];

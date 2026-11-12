@@ -7,7 +7,7 @@ from sqlalchemy.orm import sessionmaker, relationship
 # Тесты подставляют временную базу через DATABASE_URL; по умолчанию — рабочая база рядом с кодом
 DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./football_tournament.db")
 
-engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
+engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False, "timeout": 30})
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 Base = declarative_base()
 
@@ -34,6 +34,7 @@ class Team(Base):
     league_id = Column(Integer, ForeignKey("leagues.id"))
     withdrawn = Column(Boolean, default=False)       # команда снята/исключена (ст. 3.13)
     withdrawal_note = Column(String, nullable=True)  # решение Оргкомитета
+    aliases = Column(String, nullable=True)         # прежние названия через «|»: по ним старые файлы и графики находят команду
 
     league = relationship("League", back_populates="teams")
     players = relationship("Player", back_populates="team", cascade="all, delete-orphan")
@@ -199,7 +200,7 @@ def init_db() -> bool:
             if name not in cols:
                 conn.execute(text(f"ALTER TABLE matches ADD COLUMN {name} {ddl}"))
         team_cols = {c["name"] for c in inspect(conn).get_columns("teams")}
-        for name, ddl in (("withdrawn", "BOOLEAN DEFAULT 0"), ("withdrawal_note", "VARCHAR")):
+        for name, ddl in (("withdrawn", "BOOLEAN DEFAULT 0"), ("withdrawal_note", "VARCHAR"), ("aliases", "VARCHAR")):
             if name not in team_cols:
                 conn.execute(text(f"ALTER TABLE teams ADD COLUMN {name} {ddl}"))
         # Уже сыгранные матчи без отметки времени: считаем завершёнными на момент миграции

@@ -131,3 +131,19 @@ def test_technical_result_rules(client, mini):
     assert player_stats(client)[p["A1"]]["goals"] == 0                       # события отброшены
     finish(client, mid, 1, 0)                                                # обычный результат снимает флаг
     assert not next(x for x in client.get("/api/matches").json() if x["id"] == mid)["technical"]
+
+
+def test_single_match_endpoint_is_public_and_lists_events(client, mini):
+    """Окно «Подробности матча»: любой пользователь без прав видит счёт, игрока матча и события."""
+    p, t, mid = mini["players"], mini["teams"], mini["matches"]["AB"]
+    finish(client, mid, 2, 1, motm=p["A1"], events=[
+        ev(p["A1"], t["A"], "goal", 10), ev(p["B1"], t["B"], "yellow_card", 20), ev(p["B1"], t["B"], "yellow_card", 35),
+        ev(p["A2"], t["A"], "goal", 70 - 15)])
+    r = client.get(f"/api/matches/{mid}")                       # без заголовков админа
+    assert r.status_code == 200
+    m = r.json()
+    assert (m["home_team"], m["away_team"], m["home_score"], m["away_score"], m["man_of_the_match"]) == ("Команда A", "Команда B", 2, 1, "Игрок A1")
+    assert [e["effective_type"] for e in m["events"]] == ["goal", "yellow_card", "second_yellow", "goal"]   # вторая жёлтая = красная
+    assert {"player_name", "team_id", "minute"} <= set(m["events"][0])
+    assert client.get("/api/matches/99999").status_code == 404
+    assert client.get("/api/matches/upcoming").status_code == 200                # статический маршрут не перекрыт

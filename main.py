@@ -65,6 +65,11 @@ def norm(text: Optional[str]) -> str:
     text = unicodedata.normalize("NFC", str(text)).replace("_", " ")
     return re.sub(r"\s+", " ", text).strip().casefold()
 
+def team_matches(team, name: str) -> bool:
+    """Название совпадает с текущим или с одним из прежних названий команды (без учёта регистра и пробелов)."""
+    wanted = norm(name)
+    return wanted == norm(team.name) or any(wanted == norm(a) for a in (team.aliases or "").split("|") if a)
+
 def normalize_round_name(raw: str) -> str:
     """Единый вид названия тура: «Первый тур», «1 тур», «тур 1» -> «Тур 1» (чтобы не плодить дубли при повторной загрузке графика)."""
     name = re.sub(r"\s+", " ", str(raw or "")).strip()
@@ -260,7 +265,7 @@ def upload_media_bulk(
 
         matched_team = None
         for team in all_teams:
-            if norm(team.name) == clean_name:
+            if team_matches(team, base_name):
                 matched_team = team
                 break
 
@@ -337,7 +342,7 @@ def upload_schedule_excel(
                     home_name = parts[0].strip()
                     away_name = parts[1].strip()
 
-                    home_team = next((t for t in all_teams if norm(t.name) == norm(home_name)), None)
+                    home_team = next((t for t in all_teams if team_matches(t, home_name)), None)
                     if not home_team:
                         home_team = Team(name=home_name, logo_url="https://via.placeholder.com/80", league_id=matched_league.id)
                         db.add(home_team)
@@ -345,7 +350,7 @@ def upload_schedule_excel(
                         db.refresh(home_team)
                         all_teams.append(home_team)
 
-                    away_team = next((t for t in all_teams if norm(t.name) == norm(away_name)), None)
+                    away_team = next((t for t in all_teams if team_matches(t, away_name)), None)
                     if not away_team:
                         away_team = Team(name=away_name, logo_url="https://via.placeholder.com/80", league_id=matched_league.id)
                         db.add(away_team)
@@ -392,7 +397,7 @@ def upload_team_roster(
             raise HTTPException(status_code=400, detail=f"Логотип: {e}")
 
     teams = db.query(Team).filter(Team.league_id == matched_league.id).all()
-    matched_team = next((t for t in teams if norm(t.name) == norm(team_name)), None)
+    matched_team = next((t for t in teams if team_matches(t, team_name)), None)
 
     if not matched_team:
         matched_team = Team(name=team_name.strip(), league_id=matched_league.id)
@@ -687,40 +692,47 @@ def set_matches_schedule(data: ScheduleUpdate, db: Session = Depends(get_db)):
 # Результаты: все матчи (график туров)
 @app.get("/api/matches")
 def get_matches(db: Session = Depends(get_db)):
-    matches = db.query(Match).all()
-    result = []
-    for m in matches:
-        events_list = [{
-            "player_id": ev.player_id,
-            "player_name": ev.player.name if ev.player else "",
-            "team_id": ev.team_id,
-            "event_type": ev.event_type,
-            "effective_type": etype,  # second_yellow = вторая жёлтая, ставшая красной
-            "minute": ev.minute
-        } for ev, etype in effective_events(sorted(m.events, key=lambda e: e.id))]
+    return [serialize_match(m) for m in db.query(Match).all()]
 
-        result.append({
-            "id": m.id,
-            "league_id": m.league_id,
-            "league": m.league.name,
-            "round": m.round_name,
-            **match_when(m),
-            "home_team_id": m.home_team_id,
-            "home_team": m.home_team.name,
-            "home_logo": m.home_team.logo_url,
-            "away_team_id": m.away_team_id,
-            "away_team": m.away_team.name,
-            "away_logo": m.away_team.logo_url,
-            "home_score": m.home_score,
-            "away_score": m.away_score,
-            "status": m.status,
-            "technical": bool(m.technical),
-            "tech_reason": m.tech_reason,
-            "annulled": bool(m.annulled),
-            "man_of_the_match": m.man_of_the_match.name if m.man_of_the_match else None,
-            "events": events_list
-        })
-    return result
+def serialize_match(m: Match) -> dict:
+    """Матч целиком: счёт, статус, дата и время, «Игрок матча» и события (голы, карточки)."""
+    events_list = [{
+        "player_id": ev.player_id,
+        "player_name": ev.player.name if ev.player else "",
+        "team_id": ev.team_id,
+        "event_type": ev.event_type,
+        "effective_type": etype,  # second_yellow = вторая жёлтая, ставшая красной
+        "minute": ev.minute
+    } for ev, etype in effective_events(sorted(m.events, key=lambda e: e.id))]
+    return {
+        "id": m.id,
+        "league_id": m.league_id,
+        "league": m.league.name,
+        "round": m.round_name,
+        **match_when(m),
+        "home_team_id": m.home_team_id,
+        "home_team": m.home_team.name,
+        "home_logo": m.home_team.logo_url,
+        "away_team_id": m.away_team_id,
+        "away_team": m.away_team.name,
+        "away_logo": m.away_team.logo_url,
+        "home_score": m.home_score,
+        "away_score": m.away_score,
+        "status": m.status,
+        "technical": bool(m.technical),
+        "tech_reason": m.tech_reason,
+        "annulled": bool(m.annulled),
+        "man_of_the_match": m.man_of_the_match.name if m.man_of_the_match else None,
+        "events": events_list
+    }
+
+@app.get("/api/matches/{match_id}")
+def get_match(match_id: int, db: Session = Depends(get_db)):
+    """Один матч — для окна «Подробности матча» (доступно всем)."""
+    m = db.query(Match).filter(Match.id == match_id).first()
+    if not m:
+        raise HTTPException(status_code=404, detail="Матч не найден")
+    return serialize_match(m)
 
 @app.post("/api/matches/{match_id}/result", dependencies=[Depends(require_admin)])
 def submit_match_result(
@@ -913,6 +925,28 @@ def restore_team(team_id: int, db: Session = Depends(get_db)):
         sync_yellow_accumulation(db, restored[-1], affected)
     db.commit()
     return {"status": "success", "message": f"Команда «{team.name}» возвращена в турнир"}
+
+class TeamRename(BaseModel):
+    name: str = Field(..., min_length=1, max_length=100)
+
+@app.post("/api/teams/{team_id}/rename", dependencies=[Depends(require_admin)])
+def rename_team(team_id: int, data: TeamRename, db: Session = Depends(get_db)):
+    """Переименовать команду. Старое название запоминается: графики Excel и файлы логотипов со старым именем
+    по-прежнему находят эту команду и не создают дубль."""
+    team = db.query(Team).filter(Team.id == team_id).first()
+    if not team: raise HTTPException(status_code=404, detail="Команда не найдена")
+    new_name = re.sub(r"\s+", " ", data.name).strip()
+    if not new_name: raise HTTPException(status_code=400, detail="Название не может быть пустым")
+    clash = db.query(Team).filter(Team.league_id == team.league_id, Team.id != team.id).all()
+    if any(team_matches(t, new_name) for t in clash):
+        raise HTTPException(status_code=409, detail="В этой лиге уже есть команда с таким названием")
+    old = team.name
+    aliases = [a for a in (team.aliases or "").split("|") if a and norm(a) != norm(new_name)]
+    if norm(old) != norm(new_name) and not any(norm(a) == norm(old) for a in aliases):
+        aliases.append(old)
+    team.name, team.aliases = new_name, "|".join(aliases) or None
+    db.commit()
+    return {"status": "success", "message": f"«{old}» → «{new_name}»", "aliases": aliases}
 
 @app.get("/api/matches/{match_id}/suspended")
 def get_suspended_players(match_id: int, db: Session = Depends(get_db)):
