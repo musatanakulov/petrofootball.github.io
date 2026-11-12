@@ -1,0 +1,8 @@
+*.db
+*.pyc
+.env
+.pytest_cache/
+__pycache__/
+backups/
+tests/__pycache__/
+tunnel.log

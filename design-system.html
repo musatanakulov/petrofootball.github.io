@@ -1,0 +1,190 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Night Glass — система дизайна</title>
+    <link rel="stylesheet" href="style.css">
+    <style>
+        /* Только раскладка этой страницы; все цвета и формы — из токенов style.css */
+        h1 { font-size: var(--fs-xl); margin: 8px 0 4px; }
+        .lead { color: var(--text-2); font-size: 13px; margin: 0 0 18px; line-height: 1.5; }
+        .grid { display: grid; gap: 10px; }
+        .grid-2 { grid-template-columns: repeat(2, 1fr); }
+        .grid-3 { grid-template-columns: repeat(3, 1fr); }
+        .swatch { border-radius: var(--radius-md); border: 1px solid var(--border); overflow: hidden; background: var(--surface-2); }
+        .swatch i { display: block; height: 44px; }
+        .swatch b { display: block; padding: 7px 9px 0; font-size: var(--fs-xs); }
+        .swatch small { display: block; padding: 0 9px 8px; font-size: 10px; color: var(--text-3); font-family: ui-monospace, Consolas, monospace; }
+        .row { display: flex; gap: 8px; flex-wrap: wrap; align-items: center; }
+        .code { font-family: ui-monospace, Consolas, monospace; font-size: var(--fs-xs); color: var(--text-3); }
+        .rule { font-size: 13px; color: var(--text-2); line-height: 1.55; margin: 0; padding-left: 18px; }
+        .rule li { margin-bottom: 4px; }
+        .rule b { color: var(--text); }
+        .spec-label { font-size: var(--fs-xs); color: var(--text-3); text-transform: uppercase; letter-spacing: 1px; margin: 14px 0 8px; }
+        .demo-modal { position: relative; padding: 16px; border-radius: var(--radius-lg); background: var(--surface-solid); border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg); background-image: linear-gradient(160deg, rgba(79, 140, 255, 0.10), transparent 40%); }
+    </style>
+</head>
+<body>
+    <p class="header-subtitle">Кубок Акима · Design System</p>
+    <h1>Night Glass</h1>
+    <p class="lead">Тёмная стеклянная тема: глубокий синий фон, полупрозрачные карточки, неоновый синий акцент и тёплое оранжевое свечение. Все значения — токены в <span class="code">style.css</span>; в разметке используем <span class="code">var(--…)</span>, а не hex.</p>
+
+    <div class="league-section">
+        <h3>Принципы</h3>
+        <ul class="rule">
+            <li><b>Три уровня поверхностей:</b> карточка (<span class="code">.glass</span>, <span class="code">.league-section</span>) → плитка внутри (<span class="code">.tile</span>) → чип (<span class="code">.pill</span>).</li>
+            <li><b>Синий акцент</b> — только главное действие и активное состояние. <b>Оранжевое/золото</b> — тепло и награды (победитель, «Игрок матча»).</li>
+            <li><b>Зелёный, жёлтый, красный</b> — только статусы: успех, внимание, ошибка/удаление.</li>
+            <li><b>Свечение</b> (<span class="code">--glow</span>) — только у активных и главных элементов, не у всего подряд.</li>
+            <li>Окна — на <span class="code">--surface-solid</span> с размытым фоном (<span class="code">--overlay</span>).</li>
+        </ul>
+    </div>
+
+    <div class="league-section">
+        <h3>Цвета</h3>
+        <div class="spec-label">Поверхности и границы</div>
+        <div class="grid grid-3">
+            <div class="swatch"><i style="background: var(--bg)"></i><b>bg</b><small>#05070f</small></div>
+            <div class="swatch"><i style="background: var(--surface)"></i><b>surface</b><small>glass 58%</small></div>
+            <div class="swatch"><i style="background: var(--surface-solid)"></i><b>surface-solid</b><small>#0d1430</small></div>
+            <div class="swatch"><i style="background: var(--surface-2)"></i><b>surface-2</b><small>white 4.5%</small></div>
+            <div class="swatch"><i style="background: var(--surface-3)"></i><b>surface-3</b><small>white 8.5%</small></div>
+            <div class="swatch"><i style="background: var(--border-strong)"></i><b>border-strong</b><small>white 16%</small></div>
+        </div>
+        <div class="spec-label">Текст</div>
+        <div class="grid grid-3">
+            <div class="swatch"><i style="background: var(--text)"></i><b>text</b><small>#eef2ff</small></div>
+            <div class="swatch"><i style="background: var(--text-2)"></i><b>text-2</b><small>#9aa6c8</small></div>
+            <div class="swatch"><i style="background: var(--text-3)"></i><b>text-3</b><small>#66709a</small></div>
+        </div>
+        <div class="spec-label">Акценты</div>
+        <div class="grid grid-3">
+            <div class="swatch"><i style="background: var(--accent-grad)"></i><b>accent-grad</b><small>кнопки, активное</small></div>
+            <div class="swatch"><i style="background: var(--accent-2)"></i><b>accent-2</b><small>#5ac8fa</small></div>
+            <div class="swatch"><i style="background: var(--heading)"></i><b>heading</b><small>#8ab4ff</small></div>
+            <div class="swatch"><i style="background: var(--violet)"></i><b>violet</b><small>#a78bfa</small></div>
+            <div class="swatch"><i style="background: var(--orange)"></i><b>orange</b><small>#f59e54</small></div>
+            <div class="swatch"><i style="background: var(--gold)"></i><b>gold</b><small>#fbbf24</small></div>
+        </div>
+        <div class="spec-label">Статусы</div>
+        <div class="grid grid-3">
+            <div class="swatch"><i style="background: var(--green)"></i><b>green</b><small>успех</small></div>
+            <div class="swatch"><i style="background: var(--amber)"></i><b>amber</b><small>внимание</small></div>
+            <div class="swatch"><i style="background: var(--red)"></i><b>red</b><small>ошибка, удаление</small></div>
+        </div>
+    </div>
+
+    <div class="league-section">
+        <h3>Типографика</h3>
+        <div style="font-size: var(--fs-stat); font-weight: 700; letter-spacing: -0.5px;">78% <span class="code">stat 34 / 700</span></div>
+        <div style="font-size: var(--fs-xl); font-weight: 700; margin-top: 6px;">Заголовок экрана <span class="code">xl 22 / 700</span></div>
+        <div style="font-size: var(--fs-md); font-weight: 600; margin-top: 6px;">Заголовок карточки <span class="code">md 14 / 600</span></div>
+        <div style="font-size: 13px; color: var(--text-2); margin-top: 6px;">Основной текст и описания <span class="code">13 / 400</span></div>
+        <div style="font-size: var(--fs-xs); color: var(--text-3); margin-top: 6px;">Подписи и вторичные данные <span class="code">xs 11</span></div>
+    </div>
+
+    <div class="league-section">
+        <h3>Форма и эффекты</h3>
+        <div class="grid grid-3">
+            <div class="tile" style="padding: 14px; border-radius: var(--radius-lg); text-align: center;"><b>lg</b><br><span class="code">20px · карточки</span></div>
+            <div class="tile" style="padding: 14px; text-align: center;"><b>md</b><br><span class="code">14px · плитки</span></div>
+            <div class="tile" style="padding: 14px; border-radius: var(--radius-sm); text-align: center;"><b>sm</b><br><span class="code">10px · поля</span></div>
+        </div>
+        <div class="row" style="margin-top: 12px;">
+            <div class="tile" style="padding: 12px 16px; box-shadow: var(--shadow);"><span class="code">--shadow</span></div>
+            <div class="tile" style="padding: 12px 16px; box-shadow: var(--glow);"><span class="code">--glow</span></div>
+        </div>
+    </div>
+
+    <div class="league-section">
+        <h3>Навигация</h3>
+        <div class="tabs" style="margin-bottom: 10px;">
+            <button class="tab-btn active">Расписание</button><button class="tab-btn">Результаты</button><button class="tab-btn">Таблица</button>
+        </div>
+        <div class="league-subtabs" style="margin: 0;">
+            <button class="subtab-btn active">Первая лига</button><button class="subtab-btn">Вторая лига</button><button class="subtab-btn">Третья лига</button>
+        </div>
+    </div>
+
+    <div class="league-section">
+        <h3>Кнопки и статусы</h3>
+        <div class="row">
+            <button class="btn btn-primary">Главное действие</button>
+            <button class="btn btn-success">Подтвердить</button>
+            <button class="btn btn-warm">Награда</button>
+            <button class="btn btn-ghost">Вторичная</button>
+            <button class="btn btn-danger">Удалить</button>
+        </div>
+        <div class="row" style="margin-top: 12px;">
+            <span class="badge badge-accent">Акцент</span>
+            <span class="badge badge-success">Идёт голосование</span>
+            <span class="badge badge-warn">Уточняется</span>
+            <span class="badge badge-danger">Дисквалификация</span>
+            <span class="badge badge-muted">Завершено</span>
+        </div>
+    </div>
+
+    <div class="league-section">
+        <h3>Дашборд-плитки</h3>
+        <div class="grid grid-2">
+            <div class="tile" style="padding: 14px;">
+                <div class="stat-label">Сыграно матчей</div>
+                <div class="stat"><span class="stat-value">14</span><span class="stat-label">из 18</span></div>
+                <div class="bar-track" style="margin-top: 10px;"><div class="bar-fill" style="width: 78%"></div></div>
+            </div>
+            <div class="tile" style="padding: 14px; display: flex; align-items: center; justify-content: center;">
+                <div class="ring" style="--p: 78;"></div>
+            </div>
+        </div>
+    </div>
+
+    <div class="league-section">
+        <h3>Поля ввода</h3>
+        <div class="grid">
+            <input type="text" placeholder="Название команды">
+            <select><option>Первая лига</option><option>Вторая лига</option></select>
+            <textarea rows="2" placeholder="Причина удаления"></textarea>
+        </div>
+    </div>
+
+    <div class="league-section">
+        <h3>Матч, таблица, голосование</h3>
+        <div class="match-card">
+            <div class="match-team"><span style="font-size: 12px; font-weight: 700;">Смирново</span></div>
+            <div style="text-align: center;"><span class="match-score">3 : 1</span><br><span class="match-time">Сыграно</span></div>
+            <div class="match-team away"><span style="font-size: 12px; font-weight: 700;">Sparta STS Prom</span></div>
+        </div>
+        <div class="table-responsive">
+            <table>
+                <tr><th>М</th><th>Команда</th><th>И</th><th>РМ</th><th>О</th></tr>
+                <tr><td><b>1</b></td><td style="color: var(--heading); font-weight: 600;">Смирново</td><td>1</td><td>+2</td><td><b style="color: var(--heading);">3</b></td></tr>
+                <tr><td><b>2</b></td><td style="color: var(--heading); font-weight: 600;">Legenda</td><td>1</td><td>+2</td><td><b style="color: var(--heading);">3</b></td></tr>
+            </table>
+        </div>
+        <div class="vote-list" style="margin-top: 12px;">
+            <div class="vote-candidate winner">
+                <div class="vote-photo" style="display: grid; place-items: center;">🏆</div>
+                <div class="vote-info"><div class="vote-name">Игрок тура</div><div class="vote-sub">№ 7 · Команда</div>
+                    <div class="vote-bar"><div class="vote-bar-fill" style="width: 62%"></div></div></div>
+                <button class="vote-btn">Голосовать</button>
+            </div>
+        </div>
+        <div class="disq-item" style="margin: 12px 0 0;">
+            <strong>Игрок</strong> <span style="color: var(--text-2);">(Команда)</span>
+            <div class="sanction-row"><b>Причина удаления:</b> За второе предупреждение в матче <span class="sanction-auto">авто</span><br><b>Срок дисквалификации:</b> 1 матч (пропущено 0 из 1)</div>
+        </div>
+    </div>
+
+    <div class="league-section">
+        <h3>Окно</h3>
+        <div class="demo-modal">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+                <h3 style="margin: 0; padding: 0; border: 0; color: var(--heading);">Заголовок окна</h3><span style="color: var(--text-2);">✕</span>
+            </div>
+            <p style="margin: 0 0 12px; font-size: 13px; color: var(--text-2);">Окно на сплошной поверхности с мягким синим бликом сверху.</p>
+            <button class="btn btn-primary" style="width: 100%;">Сохранить</button>
+        </div>
+    </div>
+</body>
+</html>

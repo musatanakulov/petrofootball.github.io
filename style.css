@@ -1,229 +1,372 @@
+/* ==========================================================================
+   Кубок Акима — система дизайна «Night Glass»
+   Тёмная стеклянная тема: глубокий синий фон, полупрозрачные карточки,
+   неоновый синий акцент и тёплое оранжевое свечение.
+
+   Как пользоваться:
+   1. Цвета, радиусы, тени — только через токены ниже (var(--...)), не через hex.
+   2. Поверхности: .glass / .league-section (карточка) → .tile (плитка внутри карточки) → .pill (чипы, неактивное).
+   3. Акцент (--accent) — главное действие и активное состояние. Оранжевый/золото — тепло и награды.
+      Зелёный/жёлтый/красный — только статусы (успех, внимание, ошибка/удаление).
+   4. Живой пример всех компонентов: /design-system.html
+   ========================================================================== */
+
 :root {
-    --primary-blue: #1E2A8A;
-    --secondary-gold: #FBBF24;
-    --gold-light: #E6C657;
-    --bg-light: #F8FAFC;
-    --surface-dark: #0F172A;
-    --text-dark: #0F172A;
-    --text-light: #FFFFFF;
-    --muted-text: #94A3B8;
-    --border-color: #E2E8F0;
+    color-scheme: dark;
+
+    /* Основа */
+    --bg: #05070f;
+    --bg-glow-blue: rgba(37, 99, 235, 0.45);
+    --bg-glow-orange: rgba(234, 88, 12, 0.30);
+    --bg-glow-violet: rgba(99, 102, 241, 0.20);
+
+    /* Поверхности (стекло) */
+    --surface: rgba(16, 24, 50, 0.58);          /* карточка */
+    --surface-solid: #0d1430;                   /* окна, выпадающие списки */
+    --surface-2: rgba(255, 255, 255, 0.045);    /* плитка внутри карточки */
+    --surface-3: rgba(255, 255, 255, 0.085);    /* неактивные чипы и кнопки */
+    --border: rgba(255, 255, 255, 0.08);
+    --border-strong: rgba(255, 255, 255, 0.16);
+
+    /* Текст */
+    --text: #eef2ff;
+    --text-2: #9aa6c8;      /* второстепенный */
+    --text-3: #66709a;      /* подписи, плейсхолдеры */
+    --heading: #8ab4ff;     /* заголовки секций, ссылки */
+
+    /* Акценты */
+    --accent: #4f8cff;
+    --accent-2: #5ac8fa;
+    --violet: #a78bfa;
+    --orange: #f59e54;
+    --gold: #fbbf24;
+    --accent-grad: linear-gradient(135deg, #3b82f6 0%, #6366f1 100%);
+    --warm-grad: linear-gradient(135deg, #f59e54 0%, #ef7b45 100%);
+    --ring-grad: conic-gradient(from 200deg, #5ac8fa, #6366f1, #a78bfa, #5ac8fa);
+
+    /* Статусы */
+    --green: #4ade80;
+    --green-bg: rgba(74, 222, 128, 0.10);
+    --green-border: rgba(74, 222, 128, 0.28);
+    --green-btn: linear-gradient(135deg, #22c55e 0%, #16a34a 100%);
+    --red: #f87171;
+    --red-bg: rgba(248, 113, 113, 0.10);
+    --red-soft: rgba(248, 113, 113, 0.20);
+    --red-border: rgba(248, 113, 113, 0.32);
+    --amber: #f5b94c;
+    --amber-bg: rgba(251, 191, 36, 0.09);
+    --amber-soft: rgba(251, 191, 36, 0.18);
+    --amber-border: rgba(251, 191, 36, 0.30);
+
+    /* Форма */
+    --radius-lg: 20px;
+    --radius-md: 14px;
+    --radius-sm: 10px;
+    --radius-pill: 999px;
+
+    /* Эффекты */
+    --blur: 18px;
+    --shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+    --shadow-lg: 0 24px 60px rgba(0, 0, 0, 0.55);
+    --glow: 0 0 18px rgba(79, 140, 255, 0.45);
+    --glow-soft: 0 4px 16px rgba(79, 140, 255, 0.28);
+    --overlay: rgba(3, 5, 14, 0.74);
+
+    /* Типографика */
+    --font: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    --fs-xs: 11px;
+    --fs-sm: 12px;
+    --fs-md: 14px;
+    --fs-lg: 16px;
+    --fs-xl: 22px;
+    --fs-stat: 34px;
+
+    /* Совместимость со старыми именами */
+    --primary-blue: var(--accent);
+    --secondary-gold: var(--gold);
+    --muted-text: var(--text-3);
+    --border-color: var(--border);
 }
+
+* { box-sizing: border-box; }
+html { background: var(--bg); min-height: 100%; }
 
 body {
-    font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-    background-color: var(--bg-light);
-    color: var(--text-dark);
-    margin: 0;
-    padding: 16px;
-    padding-bottom: 80px;
+    font-family: var(--font);
+    background: transparent;
+    color: var(--text);
+    margin: 0 auto;
+    padding: 16px 16px 80px;
     max-width: 600px;
-    margin-left: auto;
-    margin-right: auto;
+    min-height: 100vh;
+    -webkit-font-smoothing: antialiased;
 }
 
-/* Шапка приложения с логотипами */
+/* Свечение фона: синее сверху, тёплое справа, фиолетовое снизу */
+body::before {
+    content: "";
+    position: fixed;
+    inset: 0;
+    z-index: -1;
+    pointer-events: none;
+    background:
+        radial-gradient(70% 38% at 100% 0%, var(--bg-glow-blue), transparent 62%),
+        radial-gradient(55% 34% at 100% 58%, var(--bg-glow-orange), transparent 66%),
+        radial-gradient(60% 30% at 0% 100%, var(--bg-glow-violet), transparent 64%);
+}
+
+::selection { background: rgba(79, 140, 255, 0.4); }
+:focus-visible { outline: 2px solid var(--accent-2); outline-offset: 2px; }
+* { scrollbar-width: thin; scrollbar-color: var(--border-strong) transparent; }
+img { max-width: 100%; }
+
+/* ---------- Поверхности ---------- */
+.glass, .league-section, .app-header, .tabs {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    -webkit-backdrop-filter: blur(var(--blur));
+    backdrop-filter: blur(var(--blur));
+    box-shadow: var(--shadow);
+}
+.tile { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-md); }
+.pill { background: var(--surface-3); border-radius: var(--radius-pill); }
+
+/* ---------- Шапка ---------- */
 .app-header {
     display: flex;
     align-items: center;
     justify-content: space-between;
     gap: 10px;
-    background: var(--primary-blue);
     padding: 14px 16px;
-    border-radius: 12px;
-    margin-bottom: 16px;
-    box-shadow: 0 4px 12px rgba(30, 42, 138, 0.2);
-    border-bottom: 3px solid var(--secondary-gold);
+    border-radius: var(--radius-lg);
+    margin-bottom: 14px;
     text-align: center;
+    background:
+        linear-gradient(135deg, rgba(79, 140, 255, 0.22) 0%, rgba(16, 24, 50, 0.58) 55%),
+        var(--surface);
 }
-
+/* Логотипы показываем целиком: без круглой маски, рамки и обрезки (object-fit: contain) */
 .header-logo {
-    width: 46px;
-    height: 46px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 2px solid var(--secondary-gold);
-    background: #ffffff;
-    flex-shrink: 0;
+    width: 52px; height: 52px; object-fit: contain; flex-shrink: 0;
+    filter: drop-shadow(0 2px 8px rgba(0, 0, 0, 0.45));
 }
+.header-title-wrapper { text-align: center; flex: 1; }
+.header-subtitle { font-size: var(--fs-xs); font-weight: 600; color: var(--orange); text-transform: uppercase; letter-spacing: 1.4px; margin: 5px 0 0; }
+.app-title { font-size: 15px; font-weight: 700; color: var(--text); margin: 0; line-height: 1.25; letter-spacing: 0.2px; }
 
-.header-title-wrapper {
-    text-align: center;
-    flex: 1;
-}
-
-.header-subtitle {
-    font-size: 10px;
-    font-weight: 700;
-    color: var(--secondary-gold);
-    text-transform: uppercase;
-    letter-spacing: 1px;
-    margin: 0;
-}
-
-.app-title {
-    font-size: 14px;
-    font-weight: 800;
-    color: var(--text-light);
-    text-transform: uppercase;
-    margin: 2px 0 0 0;
-    line-height: 1.2;
-}
-
-/* Навигационные вкладки */
+/* ---------- Навигация ---------- */
 .tabs {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 16px;
-    overflow-x: auto;
-    padding-bottom: 4px;
+    display: flex; gap: 4px; padding: 4px; margin-bottom: 12px;
+    border-radius: var(--radius-md); overflow-x: auto;
 }
-
 .tab-btn {
-    padding: 10px 14px;
-    border: none;
-    border-radius: 8px;
-    background: #E2E8F0;
-    color: var(--text-dark);
-    font-weight: 600;
-    font-size: 13px;
-    cursor: pointer;
-    white-space: nowrap;
-    transition: all 0.2s ease;
+    flex: 1 1 auto; padding: 10px 8px; border: none; border-radius: 11px; background: transparent;
+    color: var(--text-2); font: 600 11.5px/1 var(--font); cursor: pointer; white-space: nowrap; text-align: center;
+    transition: color .15s, background .15s, box-shadow .15s;
+}
+.tab-btn:hover { color: var(--text); background: var(--surface-2); }
+.tab-btn.active { background: var(--accent-grad); color: #fff; box-shadow: var(--glow-soft); }
+
+.league-subtabs { display: flex; gap: 6px; margin-bottom: 14px; overflow-x: auto; }
+.subtab-btn {
+    flex: 1; padding: 9px 12px; border: 1px solid var(--border); border-radius: var(--radius-pill);
+    background: var(--surface-2); color: var(--text-2); font: 600 var(--fs-xs)/1 var(--font);
+    cursor: pointer; white-space: nowrap; text-align: center; transition: all .15s;
+}
+.subtab-btn:hover { color: var(--text); border-color: var(--border-strong); }
+.subtab-btn.active {
+    background: rgba(79, 140, 255, 0.18); color: #cfe0ff; border-color: rgba(79, 140, 255, 0.6);
+    box-shadow: 0 0 14px rgba(79, 140, 255, 0.25);
 }
 
-.tab-btn.active {
-    background: var(--primary-blue);
-    color: var(--secondary-gold);
-    box-shadow: 0 4px 12px rgba(30, 42, 138, 0.25);
-}
+.tab-content { display: none; }
+.tab-content.active { display: block; }
 
-.tab-content {
-    display: none;
-}
-
-.tab-content.active {
-    display: block;
-}
-
-/* Карточки и секции */
-.league-section {
-    background: #FFFFFF;
-    border-radius: 12px;
-    padding: 16px;
-    margin-bottom: 16px;
-    box-shadow: 0 2px 6px rgba(15, 23, 42, 0.05);
-    border-top: 4px solid var(--primary-blue);
-}
-
+/* ---------- Карточка-секция ---------- */
+.league-section { border-radius: var(--radius-lg); padding: 16px; margin-bottom: 14px; }
 .league-section h3 {
-    margin-top: 0;
-    font-size: 16px;
-    font-weight: 700;
-    border-bottom: 2px solid var(--border-color);
-    padding-bottom: 8px;
-    color: var(--primary-blue);
-    text-transform: uppercase;
+    margin: 0 0 12px; padding: 0 0 10px; font-size: var(--fs-md); font-weight: 600; letter-spacing: 0.2px;
+    color: var(--text); border-bottom: 1px solid var(--border);
 }
 
-/* Таблицы */
-.table-responsive {
-    overflow-x: auto;
-}
+/* ---------- Таблица ---------- */
+.table-responsive { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; font-size: 13px; white-space: nowrap; }
+th, td { padding: 9px 6px; text-align: center; }
+th { color: var(--text-3); font-weight: 600; border-bottom: 1px solid var(--border); font-size: var(--fs-xs); text-transform: uppercase; letter-spacing: 0.6px; }
+td:nth-child(2) { text-align: left; }
+tr:nth-child(even) td { background: rgba(255, 255, 255, 0.025); }
+tr td { border-bottom: 1px solid rgba(255, 255, 255, 0.04); }
 
-table {
-    width: 100%;
-    border-collapse: collapse;
-    font-size: 13px;
-    white-space: nowrap;
-}
-
-th, td {
-    padding: 8px 6px;
-    text-align: center;
-}
-
-th {
-    color: var(--muted-text);
-    font-weight: 600;
-    border-bottom: 2px solid var(--border-color);
-    font-size: 11px;
-    text-transform: uppercase;
-}
-
-td:nth-child(2) {
-    text-align: left;
-}
-
-tr:nth-child(even) {
-    background-color: #F8FAFC;
-}
-
-/* Матч-карты */
+/* ---------- Матчи ---------- */
 .match-card {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px;
-    background: #FFFFFF;
-    border: 1px solid var(--border-color);
-    border-radius: 10px;
-    margin-bottom: 8px;
-    font-size: 13px;
-    box-shadow: 0 1px 3px rgba(0,0,0,0.02);
+    display: flex; align-items: center; justify-content: space-between; padding: 12px;
+    background: var(--surface); border: 1px solid var(--border); border-radius: var(--radius-md);
+    margin-bottom: 8px; font-size: 13px;
+    -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur));
+    transition: border-color .15s, transform .15s;
 }
-
-.match-team {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    width: 38%;
-}
-
-.match-team.away {
-    flex-direction: row-reverse;
-    text-align: right;
-}
-
-.match-team img {
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    object-fit: cover;
-    border: 1px solid var(--border-color);
-}
-
+.match-card[onclick]:hover { border-color: rgba(79, 140, 255, 0.5); }
+.match-team { display: flex; align-items: center; gap: 8px; width: 38%; cursor: pointer; }
+.match-team.away { flex-direction: row-reverse; text-align: right; }
+.match-team img { width: 34px; height: 34px; object-fit: contain; flex-shrink: 0; filter: drop-shadow(0 2px 4px rgba(0, 0, 0, 0.35)); }
 .match-score {
-    font-weight: 800;
-    font-family: 'Teko', 'Oswald', sans-serif;
-    font-size: 16px;
-    background: var(--primary-blue);
-    color: var(--secondary-gold);
-    padding: 4px 10px;
-    border-radius: 6px;
-    letter-spacing: 1px;
+    display: inline-block; font-weight: 800; font-size: 15px; background: var(--accent-grad); color: #fff;
+    padding: 5px 12px; border-radius: var(--radius-sm); box-shadow: var(--glow-soft);
+}
+.match-time { font-size: var(--fs-xs); color: var(--text-2); font-weight: 600; }
+
+/* ---------- Состояния и вспомогательные ---------- */
+.disq-item { padding: 12px; background: var(--red-bg); border: 1px solid var(--red-border); border-left: 3px solid var(--red); border-radius: var(--radius-md); font-size: 13px; margin-bottom: 8px; }
+.no-data { color: var(--text-3); font-size: 13px; font-style: italic; text-align: center; padding: 14px; }
+
+.form-badge { display: inline-block; width: 22px; height: 22px; line-height: 22px; text-align: center; border-radius: 6px; font-size: var(--fs-xs); font-weight: bold; margin-right: 3px; color: #04101f; }
+.form-w { background-color: var(--green); }
+.form-d { background-color: var(--amber); }
+.form-l { background-color: var(--red); }
+
+/* ---------- Формы и кнопки ---------- */
+input, select, textarea {
+    background: var(--surface-2); color: var(--text); border: 1px solid var(--border-strong);
+    border-radius: var(--radius-sm); font-family: var(--font);
+}
+input::placeholder, textarea::placeholder { color: var(--text-3); }
+input:focus, select:focus, textarea:focus { border-color: var(--accent); outline: none; box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.2); }
+select option { background: var(--surface-solid); color: var(--text); }
+input[type="file"] { padding: 6px; font-size: var(--fs-sm); color: var(--text-2); width: 100%; }
+input[type="file"]::file-selector-button {
+    background: var(--surface-3); color: var(--text); border: 1px solid var(--border-strong);
+    border-radius: 8px; padding: 6px 10px; margin-right: 10px; cursor: pointer; font-family: var(--font);
+}
+input[type="date"] { color-scheme: dark; }
+button { font-family: var(--font); transition: filter .15s, transform .1s; }
+button:hover:not(:disabled) { filter: brightness(1.1); }
+button:active:not(:disabled) { transform: translateY(1px); }
+
+.btn {
+    display: inline-flex; align-items: center; justify-content: center; gap: 6px; padding: 10px 16px; border: 1px solid transparent;
+    border-radius: var(--radius-sm); font: 700 var(--fs-sm)/1 var(--font); cursor: pointer; color: #fff;
+}
+.btn-primary { background: var(--accent-grad); box-shadow: var(--glow-soft); }
+.btn-success { background: var(--green-btn); }
+.btn-warm { background: var(--warm-grad); }
+.btn-ghost { background: var(--surface-2); border-color: var(--border-strong); color: var(--text); }
+.btn-danger { background: var(--red-bg); border-color: var(--red-border); color: var(--red); }
+
+.badge { display: inline-block; padding: 3px 9px; border-radius: var(--radius-pill); font-size: var(--fs-xs); font-weight: 700; }
+.badge-accent { background: rgba(79, 140, 255, 0.18); color: #cfe0ff; }
+.badge-success { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+.badge-warn { background: var(--amber-bg); color: var(--amber); border: 1px solid var(--amber-border); }
+.badge-danger { background: var(--red-bg); color: var(--red); border: 1px solid var(--red-border); }
+.badge-muted { background: var(--surface-3); color: var(--text-2); }
+
+@media (min-width: 480px) { .tab-btn { padding: 10px 12px; font-size: var(--fs-sm); } }
+
+/* ---------- Админ-панель ---------- */
+#admin-panel h3 { font-size: var(--fs-lg); }
+#admin-panel {
+    background: var(--surface) !important; border: 1px solid var(--border) !important; border-radius: var(--radius-lg);
+    -webkit-backdrop-filter: blur(var(--blur)); backdrop-filter: blur(var(--blur));
 }
 
-.match-time {
-    font-size: 11px;
-    color: var(--muted-text);
-    font-weight: 600;
+/* ---------- Окна ---------- */
+#team-modal, #player-modal, #admin-modal, #sanction-modal, #schedule-modal, #about-modal {
+    -webkit-backdrop-filter: blur(8px); backdrop-filter: blur(8px);
+}
+#team-modal > div, #player-modal > div, #admin-modal > div, #sanction-modal > div, #schedule-modal > div, #about-modal > div {
+    border: 1px solid var(--border-strong); box-shadow: var(--shadow-lg);
+    background-image: linear-gradient(160deg, rgba(79, 140, 255, 0.10), transparent 40%);
 }
 
-/* Дисквалификации */
-.disq-item {
-    padding: 10px;
-    background: #FEF2F2;
-    border-left: 4px solid #EF4444;
-    border-radius: 8px;
-    font-size: 13px;
-    margin-bottom: 8px;
-}
+/* ---------- «О турнире» ---------- */
+.about-btn { margin-top: 8px; padding: 5px 12px; border-radius: var(--radius-pill); border: 1px solid var(--border-strong); background: var(--surface-2); color: var(--text-2); font-size: var(--fs-xs); font-weight: 600; cursor: pointer; }
+.about-btn:hover { color: var(--text); border-color: var(--accent); }
+.about-sec { background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-sm); margin-bottom: 8px; }
+.about-sec summary { padding: 11px 12px; font-size: 13px; font-weight: 700; cursor: pointer; list-style: none; }
+.about-sec summary::-webkit-details-marker { display: none; }
+.about-sec summary::after { content: "＋"; float: right; color: var(--text-3); }
+.about-sec[open] summary::after { content: "−"; }
+.about-body { padding: 0 12px 12px; font-size: 13px; color: var(--text-2); line-height: 1.55; }
+.about-body p { margin: 0 0 6px; }
+.about-body ul, .about-body ol { margin: 4px 0 6px; padding-left: 20px; }
+.about-body b { color: var(--text); }
+.about-social { margin-top: 12px; padding: 12px; border-radius: var(--radius-sm); background: var(--surface-2); border: 1px solid var(--border); }
+.about-social-title { font-size: 13px; font-weight: 700; margin-bottom: 8px; }
+.about-social-row { display: flex; gap: 8px; flex-wrap: wrap; }
+.about-social-row .btn { flex: 1 1 140px; text-decoration: none; }
 
-.no-data {
-    color: var(--muted-text);
-    font-size: 13px;
-    font-style: italic;
-    text-align: center;
-    padding: 12px;
+/* ---------- Снятие команды ---------- */
+.badge-withdrawn { display: inline-block; margin-left: 6px; padding: 1px 7px; border-radius: var(--radius-pill); background: var(--red-bg); border: 1px solid var(--red-border); color: var(--red); font-size: 10px; font-weight: 700; }
+.match-card.annulled { opacity: 0.45; }
+
+/* ---------- Зоны переходов между лигами (регламент 3.6) ---------- */
+tr.zone-up td:first-child { box-shadow: inset 3px 0 0 var(--green); }
+tr.zone-down td:first-child { box-shadow: inset 3px 0 0 var(--red); }
+tr.zone-up td { background: var(--green-bg) !important; }
+tr.zone-down td { background: var(--red-bg) !important; }
+.zone-legend { display: flex; gap: 14px; flex-wrap: wrap; margin-top: 10px; font-size: var(--fs-xs); color: var(--text-2); }
+.zone-dot { display: inline-block; width: 9px; height: 9px; border-radius: 3px; margin-right: 4px; }
+.zone-dot.up { background: var(--green); }
+.zone-dot.down { background: var(--red); }
+
+/* ---------- Окно результата: техническое поражение и предупреждения ---------- */
+.warn-banner { margin-bottom: 12px; padding: 10px 12px; border-radius: var(--radius-sm); background: var(--red-bg); border: 1px solid var(--red-border); color: var(--text); font-size: var(--fs-sm); line-height: 1.45; }
+.tech-box { margin-bottom: 12px; padding: 10px; border-radius: var(--radius-sm); background: var(--amber-bg); border: 1px solid var(--amber-border); }
+.tech-title { font-size: var(--fs-sm); font-weight: 700; color: var(--amber); margin-bottom: 8px; }
+.tech-actions { display: flex; gap: 6px; flex-wrap: wrap; }
+.tech-btn { flex: 1 1 140px; padding: 8px; border-radius: 8px; border: 1px solid var(--amber-border); background: var(--surface-2); color: var(--text); font-size: var(--fs-xs); font-weight: 700; cursor: pointer; }
+.tech-btn.ghost { flex: 0 0 auto; color: var(--text-2); border-color: var(--border-strong); }
+.tech-note { font-size: var(--fs-xs); color: var(--amber); margin-top: 6px; }
+#match-details.is-disabled { opacity: 0.35; pointer-events: none; }
+
+/* ---------- Голосование ---------- */
+.vote-head { display: flex; align-items: center; justify-content: space-between; gap: 8px; margin-bottom: 8px; flex-wrap: wrap; }
+.vote-badge { font-size: var(--fs-xs); font-weight: 700; padding: 4px 10px; border-radius: var(--radius-pill); }
+.vote-badge.live { background: var(--green-bg); color: var(--green); border: 1px solid var(--green-border); }
+.vote-badge.done { background: var(--surface-3); color: var(--text-2); }
+.vote-countdown { font-size: var(--fs-sm); font-weight: 700; color: var(--accent-2); }
+.vote-note { font-size: 13px; color: var(--text-2); margin: 6px 0 10px; }
+.vote-list { display: flex; flex-direction: column; gap: 8px; }
+.vote-candidate { display: flex; align-items: center; gap: 10px; padding: 10px; background: var(--surface-2); border: 1px solid var(--border); border-radius: var(--radius-md); }
+.vote-candidate.mine { border-color: rgba(79, 140, 255, 0.6); background: rgba(79, 140, 255, 0.10); }
+.vote-candidate.winner { border-color: var(--amber-border); background: var(--amber-bg); box-shadow: 0 0 22px rgba(251, 191, 36, 0.18); }
+.vote-photo { width: 48px; height: 48px; border-radius: 50%; object-fit: cover; border: 2px solid var(--accent); background: var(--surface-2); flex-shrink: 0; }
+.vote-info { flex: 1; min-width: 0; }
+.vote-name { font-size: var(--fs-md); font-weight: 700; color: var(--text); overflow-wrap: anywhere; }
+.vote-mine { font-size: var(--fs-xs); font-weight: 700; color: var(--green); white-space: nowrap; }
+.vote-sub { font-size: var(--fs-xs); color: var(--text-2); margin-top: 2px; overflow-wrap: anywhere; }
+.vote-bar { height: 6px; background: var(--surface-3); border-radius: var(--radius-pill); overflow: hidden; margin-top: 6px; }
+.vote-bar-fill { height: 100%; background: linear-gradient(90deg, var(--accent-2), var(--accent)); border-radius: var(--radius-pill); box-shadow: var(--glow); }
+.vote-candidate.winner .vote-bar-fill { background: linear-gradient(90deg, var(--gold), var(--orange)); box-shadow: 0 0 12px rgba(251, 191, 36, 0.5); }
+.vote-btn { background: var(--accent-grad); color: #fff; border: none; padding: 9px 12px; border-radius: var(--radius-sm); font-size: var(--fs-sm); font-weight: 700; cursor: pointer; flex-shrink: 0; box-shadow: var(--glow-soft); }
+.vote-btn:disabled { opacity: 0.5; cursor: default; box-shadow: none; }
+.vote-total { font-size: var(--fs-xs); color: var(--text-3); margin: 10px 0 0; text-align: center; }
+
+/* ---------- Санкции КДК ---------- */
+.disq-player { cursor: pointer; }
+.sanction-row { margin-top: 8px; padding: 9px 11px; background: var(--surface-2); border: 1px solid var(--red-border); border-radius: var(--radius-sm); font-size: var(--fs-sm); color: var(--text); }
+.sanction-row.pending { color: var(--text-3); font-style: italic; border-style: dashed; }
+.sanction-actions { display: flex; gap: 6px; margin-top: 6px; }
+.sanction-btn { background: var(--accent-grad); color: #fff; border: none; padding: 6px 10px; border-radius: 8px; font-size: var(--fs-xs); font-weight: 700; cursor: pointer; margin-top: 8px; }
+.sanction-btn.danger { background: var(--red-bg); border: 1px solid var(--red-border); color: var(--red); }
+.sanction-actions .sanction-btn { margin-top: 0; }
+.sanction-btn.add-top { margin: 0 0 10px; padding: 8px 12px; background: var(--green-btn); }
+.sanction-auto { font-size: 10px; font-weight: 700; color: var(--amber); background: var(--amber-soft); padding: 1px 7px; border-radius: var(--radius-pill); }
+.sanction-hint { font-size: var(--fs-xs); color: var(--text-3); margin: 2px 0 6px; }
+.sanction-player { font-weight: 700; color: var(--heading); margin-bottom: 8px; }
+.sanction-label { display: block; font-size: var(--fs-sm); font-weight: 700; color: var(--heading); margin: 10px 0 4px; }
+.sanction-input { width: 100%; padding: 9px; font-size: var(--fs-md); margin-bottom: 4px; }
+
+/* ---------- Компоненты дашборда (для новых экранов) ---------- */
+.stat { display: flex; flex-direction: column; gap: 2px; }
+.stat-value { font-size: var(--fs-stat); font-weight: 700; letter-spacing: -0.5px; line-height: 1.1; }
+.stat-label { font-size: var(--fs-sm); color: var(--text-2); }
+.ring {
+    --p: 78; width: 96px; height: 96px; border-radius: 50%; display: grid; place-items: center;
+    background: conic-gradient(var(--accent-2) calc(var(--p) * 1%), var(--surface-3) 0);
+    -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px));
+    mask: radial-gradient(farthest-side, transparent calc(100% - 9px), #000 calc(100% - 8px));
+    filter: drop-shadow(0 0 8px rgba(90, 200, 250, 0.45));
 }
+.bar-track { height: 6px; background: var(--surface-3); border-radius: var(--radius-pill); overflow: hidden; }
+.bar-fill { height: 100%; border-radius: var(--radius-pill); background: linear-gradient(90deg, var(--accent-2), var(--accent)); box-shadow: var(--glow); }

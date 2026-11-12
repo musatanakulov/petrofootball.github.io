@@ -3,38 +3,43 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Кубок Акима города Петропавловск 2026-27</title>
+    <!-- Публичный HTTPS-адрес бэкенда (например https://api.example.kz). Пусто = тот же адрес, что и у страницы. -->
+    <meta name="api-origin" content="">
+    <title>Кубок Акима города Петропавловск</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
-    <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="style.css?v=night-glass-1">
 </head>
 <body>
 
-    <!-- Шапка приложения с логотипами по бокам и названием по центру -->
     <header class="app-header">
-        <img src="logo1.png" alt="Лого турнира" class="header-logo">
+        <img src="logo1.webp" alt="Лого турнира" class="header-logo">
         <div class="header-title-wrapper">
-            <p class="header-subtitle">Официальный турнир</p>
             <h1 class="app-title">Кубок Акима города Петропавловск</h1>
+            <p class="header-subtitle">2026-2027</p>
+            <button class="about-btn" onclick="openAboutModal()">ℹ️ О турнире</button>
         </div>
-        <img src="logo2.png" alt="Лого KFF" class="header-logo">
+        <img src="logo2.webp" alt="Лого KFF" class="header-logo">
     </header>
 
-    <!-- Навигационные вкладки -->
     <div class="tabs">
-        <button class="tab-btn active" onclick="switchTab('teams')">Команды</button>
-        <button class="tab-btn" onclick="switchTab('matches')">Расписание</button>
+        <button class="tab-btn active" onclick="switchTab('matches')">Расписание</button>
+        <button class="tab-btn" onclick="switchTab('results')">Результаты</button>
         <button class="tab-btn" onclick="switchTab('standings')">Таблица</button>
-        <button class="tab-btn" onclick="switchTab('scorers')">Бомбардиры</button>
-        <button class="tab-btn" onclick="switchTab('disq')">Дисквалификации</button>
+        <button class="tab-btn" onclick="switchTab('stats')">Статистика</button>
+        <button class="tab-btn" onclick="switchTab('vote')">Голосование</button>
     </div>
 
-    <!-- Вкладки контента -->
-    <div id="teams-tab" class="tab-content active">
-        <div id="leagues-container"><p class="no-data">Загрузка команд...</p></div>
-    </div>
+    <!-- Подпункты «Статистики»: Бомбардиры / Дисквалификации (показываются только на этой вкладке) -->
+    <div id="stats-subtabs" class="league-subtabs" style="display: none; gap: 8px; padding: 10px 10px 0 10px; overflow-x: auto;"></div>
+    <div id="league-subtabs" class="league-subtabs" style="display: flex; gap: 8px; padding: 10px; overflow-x: auto;"></div>
+    <div id="rounds-subtabs" class="league-subtabs" style="display: none; gap: 8px; padding: 0 10px 10px 10px; overflow-x: auto;"></div>
 
-    <div id="matches-tab" class="tab-content">
+    <div id="matches-tab" class="tab-content active">
         <div id="matches-container"><p class="no-data">Загрузка расписания...</p></div>
+    </div>
+
+    <div id="results-tab" class="tab-content">
+        <div id="results-container"><p class="no-data">Загрузка результатов...</p></div>
     </div>
 
     <div id="standings-tab" class="tab-content">
@@ -49,6 +54,45 @@
         <div id="disq-container"><p class="no-data">Загрузка дисквалификаций...</p></div>
     </div>
 
-    <script src="app.js"></script>
+    <div id="vote-tab" class="tab-content">
+        <div id="vote-container"><p class="no-data">Загрузка голосования...</p></div>
+    </div>
+
+    <!-- Админ-панель -->
+    <div id="admin-panel" style="display: none; padding: 20px; background: var(--surface-2); margin-top: 20px; border-top: 2px solid var(--border);">
+        <h3 style="color: var(--heading); margin-top: 0;">🛠 Админ-панель: Загрузка графиков и медиа</h3>
+        
+        <div style="margin-bottom: 15px; background: var(--surface-solid); padding: 12px; border-radius: 8px; border: 1px solid var(--border-strong);">
+            <label style="font-weight: bold; font-size: 13px; color: var(--heading);">Загрузить график туров (Excel .xlsx):</label><br>
+            <select id="excel-league-name" style="padding: 6px; margin: 6px 0; border-radius: 6px; width: 100%;">
+                <option value="Первая лига">Первая лига</option>
+                <option value="Вторая лига" selected>Вторая лига</option>
+                <option value="Третья лига">Третья лига</option>
+            </select><br>
+            <input type="file" id="excel-schedule-file" accept=".xlsx" style="margin-bottom: 6px;"><br>
+            <button onclick="uploadExcelSchedule()" style="background: var(--accent-grad); color: white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">Загрузить график из Excel</button>
+            <p id="excel-upload-status" style="font-size: 12px; font-weight: bold; margin-top: 6px;"></p>
+        </div>
+
+        <div style="margin-bottom: 15px; background: var(--surface-solid); padding: 12px; border-radius: 8px; border: 1px solid var(--border-strong);">
+            <label style="font-weight: bold; font-size: 13px; color: var(--heading);">Загрузить состав команды (Word .docx):</label><br>
+            <select id="roster-league" style="padding: 6px; margin: 6px 0; border-radius: 6px; width: 100%;" onchange="fillRosterTeams()"></select><br>
+            <input type="text" id="roster-team" list="roster-team-list" placeholder="Название команды" style="padding: 6px; margin-bottom: 6px; border-radius: 6px; border: 1px solid var(--border-strong); width: 100%; box-sizing: border-box;">
+            <datalist id="roster-team-list"></datalist>
+            <label style="font-size: 12px; color: var(--text-2);">Заявка (.docx):</label><br>
+            <input type="file" id="roster-file" accept=".docx" style="margin-bottom: 6px;"><br>
+            <label style="font-size: 12px; color: var(--text-2);">Логотип (необязательно):</label><br>
+            <input type="file" id="roster-logo" accept="image/*" style="margin-bottom: 6px;"><br>
+            <button onclick="uploadRoster()" style="background: var(--accent-grad); color: white; border: none; padding: 8px 12px; border-radius: 6px; font-weight: bold; cursor: pointer;">Загрузить состав</button>
+            <p id="roster-upload-status" style="font-size: 12px; font-weight: bold; margin-top: 6px;"></p>
+        </div>
+
+        <p style="font-size: 12px; color: var(--text-2);">Массовая загрузка логотипов и фото (по именам файлов):</p>
+        <input type="file" id="bulk-media-upload" multiple accept="image/*" style="margin-bottom: 10px;">
+        <button onclick="uploadBulkMedia()" style="background: var(--green-btn); color: white; border: none; padding: 10px 15px; border-radius: 6px; font-weight: bold; cursor: pointer;">Загрузить картинки пачкой</button>
+        <p id="upload-status" style="font-size: 13px; font-weight: bold; margin-top: 10px;"></p>
+    </div>
+
+    <script src="app.js?v=night-glass-1"></script>
 </body>
 </html>
