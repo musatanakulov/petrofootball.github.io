@@ -454,3 +454,20 @@ tr.zone-down td { background: var(--red-bg) !important; }
 }
 .bar-track { height: 6px; background: var(--surface-3); border-radius: var(--radius-pill); overflow: hidden; }
 .bar-fill { height: 100%; border-radius: var(--radius-pill); background: linear-gradient(90deg, var(--accent-2), var(--accent)); box-shadow: var(--glow); }
+
+/* Турнирная таблица: все 10 колонок помещаются на узком экране, длинное название переносится по словам, а не наезжает на цифры */
+table.standings { table-layout: fixed; font-size: 12px; white-space: normal; }
+.standings th, .standings td { padding: 7px 1px; overflow: hidden; }
+.standings th:nth-child(1) { width: 20px; }
+.standings th:nth-child(2) { width: auto; text-align: left; padding-left: 4px; }
+.standings th:nth-child(n+3):nth-child(-n+6) { width: 20px; }
+.standings th:nth-child(7), .standings th:nth-child(8) { width: 24px; }
+.standings th:nth-child(9) { width: 28px; }
+.standings th:nth-child(10) { width: 26px; }
+.standings th { letter-spacing: 0; font-size: 10px; }
+.standings td:nth-child(2) { line-height: 1.2; overflow-wrap: break-word; word-break: normal; hyphens: auto; padding-left: 4px; }
+.standings td:nth-child(2) img { width: 18px; height: 18px; margin-right: 4px; }
+@media (max-width: 359px) {
+    .league-section { padding-left: 10px; padding-right: 10px; }
+    .standings td:nth-child(2) img { display: none; }   /* на самых узких экранах логотип уступает место названию */
+}

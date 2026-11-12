@@ -645,7 +645,7 @@ async function fetchStandings(leagueId) {
             <div class="league-section">
                 <h3>Турнирная таблица</h3>
                 <div class="table-responsive">
-                    <table>
+                    <table class="standings">
                         <tr>
                             <th>М</th>
                             <th style="text-align: left;">Команда</th>
@@ -662,7 +662,7 @@ async function fetchStandings(leagueId) {
                             <tr class="${zoneClass(index + 1)} ${row.team_id === myTeamId ? "my-team" : ""}">
                                 <td><b>${index + 1}</b></td>
                                 <td style="text-align: left; cursor: pointer; color: var(--heading); font-weight: 600;" onclick="openTeamProfile(${row.team_id})">
-                                    <img loading="lazy" decoding="async" src="${mediaUrl(row.logo_url)}" width="22" height="22" style="object-fit: contain; vertical-align: middle; margin-right: 6px;">
+                                    <img loading="lazy" decoding="async" src="${mediaUrl(row.logo_url)}" width="20" height="20" style="object-fit: contain; vertical-align: middle; margin-right: 4px;">
                                     ${row.team_id === myTeamId ? '⭐ ' : ''}${esc(row.team_name)}${row.withdrawn ? '<span class="badge-withdrawn">снята</span>' : ''}
                                 </td>
                                 <td>${row.played}</td>

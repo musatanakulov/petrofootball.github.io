@@ -60,6 +60,12 @@ async def unhandled_error(request: Request, exc: Exception):
     return JSONResponse(status_code=500, content={"detail": "Внутренняя ошибка сервера. Попробуйте позже."})
 
 
+@app.exception_handler(OverflowError)
+async def id_too_large(request: Request, exc: OverflowError):
+    # Нечеловечески большой id в адресе: такой записи точно нет
+    return JSONResponse(status_code=404, content={"detail": "Не найдено"})
+
+
 @app.middleware("http")
 async def security_headers(request: Request, call_next):
     response = await call_next(request)

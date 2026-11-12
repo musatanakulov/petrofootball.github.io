@@ -33,3 +33,7 @@ def test_media_is_cacheable_but_frontend_is_not(client):
 def test_sqlite_uses_wal():
     with engine.connect() as c:
         assert c.exec_driver_sql("PRAGMA journal_mode").scalar() == "wal"
+
+
+def test_huge_id_is_404_not_500(client):
+    assert client.get("/api/matches/99999999999999999999").status_code == 404
