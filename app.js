@@ -1111,7 +1111,7 @@ async function openTeamProfile(teamId) {
 
                 <h4 style="margin: 0 0 10px 0; color: var(--heading); font-size: 13px; border-top: 1px solid var(--border); padding-top: 10px;">👥 Состав и статистика игроков:</h4>
                 <div style="display: flex; flex-direction: column; gap: 6px;">
-                    ${team.players.length ? team.players.map(p => `
+                    ${team.players.length ? [...team.players].sort((a, b) => (b.stats.goals - a.stats.goals) || (a.number - b.number)).map(p => `
                         <div onclick="openPlayerProfile(${team.id}, ${p.id})" style="display: flex; justify-content: space-between; align-items: center; padding: 8px 10px; background: var(--surface-2); border-radius: 8px; border: 1px solid var(--border); font-size: 12px; cursor: pointer;">
                             <span><b>${p.number}.</b> ${esc(p.name)}</span>
                             <span style="white-space: nowrap; color: var(--text-2);">
