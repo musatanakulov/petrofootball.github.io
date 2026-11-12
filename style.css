@@ -471,3 +471,10 @@ table.standings { table-layout: fixed; font-size: 12px; white-space: normal; }
     .league-section { padding-left: 10px; padding-right: 10px; }
     .standings td:nth-child(2) img { display: none; }   /* на самых узких экранах логотип уступает место названию */
 }
+
+/* Вкладки на узких телефонах: все 5 видны сразу, без прокрутки */
+@media (max-width: 389px) {
+    .tabs { gap: 2px; padding: 3px; overflow-x: hidden; }
+    .tab-btn { flex: 1 1 0; min-width: 0; padding: 10px 1px; font-size: 10px; letter-spacing: -0.2px; overflow: hidden; text-overflow: ellipsis; }
+}
+@media (max-width: 339px) { .tab-btn { font-size: 9px; } }
